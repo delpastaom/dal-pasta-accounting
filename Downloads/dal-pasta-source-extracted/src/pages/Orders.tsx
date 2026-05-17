@@ -106,10 +106,16 @@ export default function Orders() {
     }
   };
 
+  const getOrderNum = (order: Order) => {
+    const sorted = [...orders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return sorted.findIndex(o => o.id === order.id) + 1;
+  };
+
   const shareWhatsApp = (order: Order) => {
+    const num = getOrderNum(order);
     const balance = order.total - order.deposit;
     const lines = [
-      '🍽️ *دل باستا* — فاتورة طلب',
+      `🍽️ *دل باستا* — طلب رقم #${num}`,
       '━━━━━━━━━━━━━━',
       `👤 *العميل:* ${order.customerName}`,
       order.area ? `📍 *المنطقة:* ${order.area}` : '',
@@ -130,31 +136,100 @@ export default function Orders() {
     window.open(url, '_blank');
   };
 
-  const printInvoice = (order: Order) => {
+  const printCustomerReceipt = (order: Order) => {
+    const num = getOrderNum(order);
     const balance = order.total - order.deposit;
-    const rows = order.items.map(i =>
-      `<tr><td>${i.dishName}</td><td style="text-align:center">${i.quantity}</td><td>${i.price.toFixed(3)} ر.ع</td><td style="font-weight:bold">${(i.price * i.quantity).toFixed(3)} ر.ع</td></tr>`
-    ).join('');
-    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>فاتورة دل باستا</title>
-<style>body{font-family:Arial,sans-serif;max-width:420px;margin:20px auto;color:#2C1810;padding:16px}
-h1{color:#E5A53C;text-align:center;margin:0}.sub{text-align:center;color:#8B7355;margin-bottom:16px}
-hr{border:none;border-top:2px solid #E5A53C;margin:12px 0}
-table{width:100%;border-collapse:collapse}th{background:#F5E6C8;padding:8px;text-align:right}
-td{padding:6px 8px;border-bottom:1px solid #eee}.total{color:#E5A53C;font-size:1.1em}
-.balance{color:#dc2626}.btn{background:#E5A53C;color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;width:100%;font-size:15px;margin-top:16px}
-@media print{.btn{display:none}}</style></head>
-<body><h1>🍽️ دل باستا</h1><p class="sub">فاتورة طلب</p><hr>
-<p><strong>العميل:</strong> ${order.customerName}</p>
-${order.area ? `<p><strong>المنطقة:</strong> ${order.area}</p>` : ''}
-${order.customerPhone ? `<p><strong>الهاتف:</strong> ${order.customerPhone}</p>` : ''}
-<p><strong>تاريخ التسليم:</strong> ${order.deliveryDate}</p><hr>
-<table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
-<tbody>${rows}</tbody></table><hr>
-${order.deliveryFee > 0 ? `<p><strong>رسوم التوصيل:</strong> ${order.deliveryFee.toFixed(3)} ر.ع</p>` : ''}
-<p class="total"><strong>الإجمالي الكلي: ${order.total.toFixed(3)} ر.ع</strong></p>
-${order.deposit > 0 ? `<p><strong>العربون المدفوع:</strong> ${order.deposit.toFixed(3)} ر.ع</p><p class="balance"><strong>المبلغ المتبقي: ${balance.toFixed(3)} ر.ع</strong></p>` : ''}
-${order.notes ? `<hr><p><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
-<button class="btn" onclick="window.print()">🖨️ طباعة</button></body></html>`;
+    const itemRows = order.items.map(i => `
+      <div class="item-row">
+        <span class="item-name">${i.dishName}</span>
+        <span class="item-qty">x${i.quantity}</span>
+      </div>
+      <div class="item-price">${i.price.toFixed(3)} × ${i.quantity} = <b>${(i.price * i.quantity).toFixed(3)} ر.ع</b></div>
+    `).join('<div class="divider"></div>');
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>فاتورة #${num}</title>
+<style>
+@page{size:80mm auto;margin:4mm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;color:#000;width:72mm}
+.center{text-align:center}
+.logo{font-size:18px;font-weight:bold;text-align:center;margin:4px 0}
+.order-num{font-size:15px;font-weight:bold;text-align:center;border:2px solid #000;padding:3px;margin:4px 0;letter-spacing:1px}
+.dash{border:none;border-top:1px dashed #000;margin:5px 0}
+.info{font-size:12px;margin:2px 0}
+.info b{font-size:13px}
+.item-row{display:flex;justify-content:space-between;font-size:13px;font-weight:bold;margin-top:4px}
+.item-qty{font-size:14px;font-weight:bold}
+.item-price{font-size:11px;color:#333;margin-bottom:3px}
+.divider{border-top:1px dotted #ccc;margin:3px 0}
+.total-row{display:flex;justify-content:space-between;font-size:14px;font-weight:bold;margin:3px 0}
+.balance-row{display:flex;justify-content:space-between;font-size:13px;font-weight:bold;color:#c00;margin:2px 0}
+.footer{text-align:center;font-size:10px;margin-top:6px}
+</style></head>
+<body>
+<div class="logo">🍽️ دل باستا</div>
+<div class="order-num">طلب رقم #${num}</div>
+<hr class="dash">
+<div class="info"><b>${order.customerName}</b></div>
+${order.customerPhone ? `<div class="info">📞 ${order.customerPhone}</div>` : ''}
+${order.area ? `<div class="info">📍 ${order.area}</div>` : ''}
+<div class="info">📅 تاريخ التسليم: <b>${order.deliveryDate}</b></div>
+<hr class="dash">
+${itemRows}
+<hr class="dash">
+${order.deliveryFee > 0 ? `<div class="total-row"><span>توصيل</span><span>${order.deliveryFee.toFixed(3)} ر.ع</span></div>` : ''}
+<div class="total-row"><span>الإجمالي</span><span>${order.total.toFixed(3)} ر.ع</span></div>
+${order.deposit > 0 ? `
+<div class="total-row" style="font-size:12px;font-weight:normal"><span>العربون المدفوع</span><span>${order.deposit.toFixed(3)} ر.ع</span></div>
+<div class="balance-row"><span>المبلغ المتبقي</span><span>${balance.toFixed(3)} ر.ع</span></div>` : ''}
+${order.notes ? `<hr class="dash"><div class="info">📝 ${order.notes}</div>` : ''}
+<hr class="dash">
+<div class="footer">شكراً لكم 🙏</div>
+<script>window.onload=()=>window.print()</script>
+</body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
+  const printKitchenTicket = (order: Order) => {
+    const num = getOrderNum(order);
+    const itemRows = order.items.map(i => `
+      <div class="item">${i.dishName}</div>
+      <div class="qty">× ${i.quantity}</div>
+      <hr class="dash">
+    `).join('');
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Kitchen #${num}</title>
+<style>
+@page{size:80mm auto;margin:4mm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:12px;color:#000;width:72mm}
+.header{text-align:center;font-size:11px;font-weight:bold;letter-spacing:2px;margin-bottom:3px}
+.order-box{border:3px solid #000;text-align:center;padding:4px;margin:4px 0}
+.order-box .label{font-size:11px;font-weight:bold}
+.order-box .num{font-size:32px;font-weight:bold;line-height:1}
+.info{font-size:13px;font-weight:bold;margin:2px 0}
+.info-sub{font-size:11px;color:#333;margin:1px 0}
+.dash{border:none;border-top:1px dashed #000;margin:5px 0}
+.item{font-size:16px;font-weight:bold;margin-top:5px}
+.qty{font-size:20px;font-weight:bold;text-align:right;margin-bottom:3px}
+.footer{text-align:center;font-size:10px;margin-top:6px;letter-spacing:1px}
+</style></head>
+<body>
+<div class="header">-- KITCHEN TICKET --</div>
+<div class="order-box">
+  <div class="label">ORDER</div>
+  <div class="num">#${num}</div>
+</div>
+<hr class="dash">
+<div class="info">${order.customerName}</div>
+${order.area ? `<div class="info-sub">📍 ${order.area}</div>` : ''}
+${order.customerPhone ? `<div class="info-sub">📞 ${order.customerPhone}</div>` : ''}
+<div class="info-sub">📅 Delivery: <b>${order.deliveryDate}</b></div>
+<hr class="dash">
+${itemRows}
+${order.notes ? `<div class="info-sub"><b>Notes:</b> ${order.notes}</div><hr class="dash">` : ''}
+<div class="footer">DAL PASTA KITCHEN</div>
+<script>window.onload=()=>window.print()</script>
+</body></html>`;
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
   };
@@ -396,6 +471,7 @@ ${order.notes ? `<hr><p><strong>ملاحظات:</strong> ${order.notes}</p>` : '
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: '#F5E6C8', color: '#8B6914' }}>#{getOrderNum(order)}</span>
                       <p className="font-bold text-sm">{order.customerName}</p>
                       {order.type === 'advance' && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#fef3c7', color: '#92400e' }}>{t('deposit')}</span>}
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
@@ -414,7 +490,8 @@ ${order.notes ? `<hr><p><strong>ملاحظات:</strong> ${order.notes}</p>` : '
                   <button onClick={() => handleEdit(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-100" style={{ color: '#8B6914' }}>{t('edit')}</button>
                   <button onClick={() => setDeleteDialog(order.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-red-50 text-red-500">{t('delete')}</button>
                   <button onClick={() => shareWhatsApp(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-green-50 text-green-600">📲 {t('shareWhatsapp')}</button>
-                  <button onClick={() => printInvoice(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-blue-50 text-blue-600">🖨️ {t('printInvoice')}</button>
+                  <button onClick={() => printCustomerReceipt(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-50" style={{ color: '#8B6914' }}>🧾 {t('customerReceipt')}</button>
+                  <button onClick={() => printKitchenTicket(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-blue-50 text-blue-600">🍳 {t('kitchenTicket')}</button>
                 </div>
               </CardContent>
             </Card>
