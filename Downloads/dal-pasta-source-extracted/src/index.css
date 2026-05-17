@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 100% 97%;
+    --foreground: 15 30% 12%;
+    --card: 38 60% 95%;
+    --card-foreground: 15 30% 12%;
+    --popover: 38 100% 97%;
+    --popover-foreground: 15 30% 12%;
+    --primary: 38 75% 55%;
+    --primary-foreground: 38 100% 97%;
+    --secondary: 30 30% 75%;
+    --secondary-foreground: 15 30% 12%;
+    --muted: 35 30% 88%;
+    --muted-foreground: 15 15% 45%;
+    --accent: 25 60% 45%;
+    --accent-foreground: 38 100% 97%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 35 40% 80%;
+    --input: 35 40% 85%;
+    --ring: 38 75% 55%;
+    --radius: 0.625rem;
+    --sidebar-background: 15 30% 12%;
+    --sidebar-foreground: 38 30% 90%;
+    --sidebar-primary: 38 75% 55%;
+    --sidebar-primary-foreground: 15 30% 12%;
+    --sidebar-accent: 25 40% 25%;
+    --sidebar-accent-foreground: 38 30% 90%;
+    --sidebar-border: 15 20% 25%;
+    --sidebar-ring: 38 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Segoe UI', 'Tahoma', system-ui, sans-serif;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  direction: rtl;
+}
+
+[dir="ltr"] {
+  direction: ltr;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border-radius: 3px;
+}
+
+/* PIN input dots */
+.pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid hsl(var(--primary));
+  transition: all 0.2s;
+}
+.pin-dot.filled {
+  background: hsl(var(--primary));
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes pulse-warn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+.animate-pulse-warn {
+  animation: pulse-warn 2s infinite;
+}
