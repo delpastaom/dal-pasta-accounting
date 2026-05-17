@@ -15,6 +15,8 @@ interface DashboardStats {
   avgOrder: number;
   recentOrders: Order[];
   categoryBreakdown: { category: string; amount: number; percentage: number }[];
+  upcomingBookings: Order[];
+  outstandingOrders: Order[];
 }
 
 export default function Dashboard() {
@@ -24,6 +26,8 @@ export default function Dashboard() {
     todayOrders: 0, pendingBookings: 0, lowStock: 0,
     expenseRatio: 0, avgOrder: 0, recentOrders: [],
     categoryBreakdown: [],
+    upcomingBookings: [],
+    outstandingOrders: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -38,8 +42,18 @@ export default function Dashboard() {
       const todayOrders = await OrderDB.getToday();
       const pendingBookings = await OrderDB.getPendingAdvance();
       const lowStock = await ProductDB.getLowStock();
-      const recentOrders = (await OrderDB.getAll()).slice(0, 5);
+      const allOrders = await OrderDB.getAll();
+      const recentOrders = allOrders.slice(0, 5);
       const categoryBreakdown = await ReportDB.getCategoryBreakdown();
+
+      const today = new Date().toISOString().split('T')[0];
+      const in7Days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+      const upcomingBookings = pendingBookings
+        .filter(o => o.deliveryDate >= today && o.deliveryDate <= in7Days)
+        .sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
+      const outstandingOrders = pendingBookings
+        .filter(o => o.deposit < o.total)
+        .sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
 
       const expenseRatio = thisMonth.income > 0 ? (thisMonth.expenses / thisMonth.income) * 100 : 0;
 
@@ -54,6 +68,8 @@ export default function Dashboard() {
         avgOrder: thisMonth.avgOrder,
         recentOrders,
         categoryBreakdown,
+        upcomingBookings,
+        outstandingOrders,
       });
     } catch (e) {
       console.error(e);
@@ -202,6 +218,73 @@ export default function Dashboard() {
                       order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-red-100 text-red-700'
                     }`}>{t(order.status)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upcoming Deliveries */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span>📅</span> {t('upcomingDeliveries')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {stats.upcomingBookings.length === 0 ? (
+            <div className="p-4 text-center text-sm" style={{ color: '#8B7355' }}>{t('noUpcoming')}</div>
+          ) : (
+            <div className="divide-y divide-amber-100/50">
+              {stats.upcomingBookings.map(order => {
+                const daysLeft = Math.ceil((new Date(order.deliveryDate).getTime() - Date.now()) / 86400000);
+                return (
+                  <div key={order.id} className="p-4 flex items-center justify-between hover:bg-amber-50/50 cursor-pointer" onClick={() => navigate('/orders')}>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{order.customerName}</p>
+                      <p className="text-xs mt-0.5" style={{ color: '#8B7355' }}>
+                        {order.items.map(i => i.dishName).join(', ')}
+                      </p>
+                    </div>
+                    <div className="text-left flex-shrink-0 mr-3">
+                      <p className="font-bold text-sm" style={{ color: '#E5A53C' }}>{order.deliveryDate}</p>
+                      <p className="text-xs" style={{ color: daysLeft <= 1 ? '#dc2626' : daysLeft <= 3 ? '#d97706' : '#16a34a' }}>
+                        {daysLeft === 0 ? '⚡ اليوم' : daysLeft === 1 ? '⚠️ غداً' : `${daysLeft} أيام`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Outstanding Balances */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span>💳</span> {t('outstandingBalances')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {stats.outstandingOrders.length === 0 ? (
+            <div className="p-4 text-center text-sm" style={{ color: '#8B7355' }}>{t('noOutstanding')}</div>
+          ) : (
+            <div className="divide-y divide-amber-100/50">
+              {stats.outstandingOrders.map(order => (
+                <div key={order.id} className="p-4 flex items-center justify-between hover:bg-amber-50/50 cursor-pointer" onClick={() => navigate('/orders')}>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{order.customerName}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#8B7355' }}>{order.deliveryDate}</p>
+                  </div>
+                  <div className="text-left flex-shrink-0 mr-3">
+                    <p className="text-xs" style={{ color: '#8B7355' }}>{t('total')}: {order.total.toFixed(3)} {t('omr')}</p>
+                    <p className="font-bold text-sm" style={{ color: '#dc2626' }}>
+                      {t('remaining')}: {(order.total - order.deposit).toFixed(3)} {t('omr')}
+                    </p>
                   </div>
                 </div>
               ))}

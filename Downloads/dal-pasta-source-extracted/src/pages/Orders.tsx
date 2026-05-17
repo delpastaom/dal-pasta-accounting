@@ -106,6 +106,59 @@ export default function Orders() {
     }
   };
 
+  const shareWhatsApp = (order: Order) => {
+    const balance = order.total - order.deposit;
+    const lines = [
+      '🍽️ *دل باستا* — فاتورة طلب',
+      '━━━━━━━━━━━━━━',
+      `👤 *العميل:* ${order.customerName}`,
+      order.area ? `📍 *المنطقة:* ${order.area}` : '',
+      `📅 *تاريخ التسليم:* ${order.deliveryDate}`,
+      '━━━━━━━━━━━━━━',
+      '*الأصناف:*',
+      ...order.items.map(i => `• ${i.dishName} x${i.quantity} — ${(i.price * i.quantity).toFixed(3)} ر.ع`),
+      '━━━━━━━━━━━━━━',
+      `*الإجمالي:* ${order.total.toFixed(3)} ر.ع`,
+      order.deposit > 0 ? `*العربون المدفوع:* ${order.deposit.toFixed(3)} ر.ع` : '',
+      order.deposit > 0 ? `*المتبقي:* ${balance.toFixed(3)} ر.ع` : '',
+      order.notes ? `\n📝 ${order.notes}` : '',
+    ].filter(Boolean).join('\n');
+    const phone = order.customerPhone?.replace(/\D/g, '');
+    const url = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(lines)}`
+      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
+    window.open(url, '_blank');
+  };
+
+  const printInvoice = (order: Order) => {
+    const balance = order.total - order.deposit;
+    const rows = order.items.map(i =>
+      `<tr><td>${i.dishName}</td><td style="text-align:center">${i.quantity}</td><td>${i.price.toFixed(3)} ر.ع</td><td style="font-weight:bold">${(i.price * i.quantity).toFixed(3)} ر.ع</td></tr>`
+    ).join('');
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>فاتورة دل باستا</title>
+<style>body{font-family:Arial,sans-serif;max-width:420px;margin:20px auto;color:#2C1810;padding:16px}
+h1{color:#E5A53C;text-align:center;margin:0}.sub{text-align:center;color:#8B7355;margin-bottom:16px}
+hr{border:none;border-top:2px solid #E5A53C;margin:12px 0}
+table{width:100%;border-collapse:collapse}th{background:#F5E6C8;padding:8px;text-align:right}
+td{padding:6px 8px;border-bottom:1px solid #eee}.total{color:#E5A53C;font-size:1.1em}
+.balance{color:#dc2626}.btn{background:#E5A53C;color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;width:100%;font-size:15px;margin-top:16px}
+@media print{.btn{display:none}}</style></head>
+<body><h1>🍽️ دل باستا</h1><p class="sub">فاتورة طلب</p><hr>
+<p><strong>العميل:</strong> ${order.customerName}</p>
+${order.area ? `<p><strong>المنطقة:</strong> ${order.area}</p>` : ''}
+${order.customerPhone ? `<p><strong>الهاتف:</strong> ${order.customerPhone}</p>` : ''}
+<p><strong>تاريخ التسليم:</strong> ${order.deliveryDate}</p><hr>
+<table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+<tbody>${rows}</tbody></table><hr>
+${order.deliveryFee > 0 ? `<p><strong>رسوم التوصيل:</strong> ${order.deliveryFee.toFixed(3)} ر.ع</p>` : ''}
+<p class="total"><strong>الإجمالي الكلي: ${order.total.toFixed(3)} ر.ع</strong></p>
+${order.deposit > 0 ? `<p><strong>العربون المدفوع:</strong> ${order.deposit.toFixed(3)} ر.ع</p><p class="balance"><strong>المبلغ المتبقي: ${balance.toFixed(3)} ر.ع</strong></p>` : ''}
+${order.notes ? `<hr><p><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
+<button class="btn" onclick="window.print()">🖨️ طباعة</button></body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
   const handleDelete = async (id: string) => {
     try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e) {}
   };
@@ -360,6 +413,8 @@ export default function Orders() {
                 <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid rgba(229,165,60,0.15)' }}>
                   <button onClick={() => handleEdit(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-100" style={{ color: '#8B6914' }}>{t('edit')}</button>
                   <button onClick={() => setDeleteDialog(order.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-red-50 text-red-500">{t('delete')}</button>
+                  <button onClick={() => shareWhatsApp(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-green-50 text-green-600">📲 {t('shareWhatsapp')}</button>
+                  <button onClick={() => printInvoice(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-blue-50 text-blue-600">🖨️ {t('printInvoice')}</button>
                 </div>
               </CardContent>
             </Card>

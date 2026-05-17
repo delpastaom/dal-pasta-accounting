@@ -206,6 +206,15 @@ const translations = {
     editDish: 'تعديل صنف',
     newDish: 'صنف جديد',
     dishPriceNote: 'تغيير السعر لن يؤثر على الطلبات السابقة',
+    invoice: 'الفاتورة',
+    shareWhatsapp: 'واتساب',
+    printInvoice: 'طباعة',
+    upcomingDeliveries: 'تسليمات قادمة — هذا الأسبوع',
+    outstandingBalances: 'مبالغ مستحقة',
+    noUpcoming: 'لا توجد تسليمات قادمة',
+    noOutstanding: 'لا توجد مبالغ مستحقة',
+    remaining: 'المتبقي',
+    dueDate: 'تاريخ التسليم',
   },
   en: {
     appName: 'Dal Pasta',
@@ -410,6 +419,15 @@ const translations = {
     editDish: 'Edit Dish',
     newDish: 'New Dish',
     dishPriceNote: 'Price changes won\'t affect past orders',
+    invoice: 'Invoice',
+    shareWhatsapp: 'WhatsApp',
+    printInvoice: 'Print',
+    upcomingDeliveries: 'Upcoming Deliveries — This Week',
+    outstandingBalances: 'Outstanding Balances',
+    noUpcoming: 'No upcoming deliveries',
+    noOutstanding: 'No outstanding balances',
+    remaining: 'Remaining',
+    dueDate: 'Delivery Date',
   }
 };
 
