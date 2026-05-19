@@ -107,9 +107,9 @@ For more information, see https://radix-ui.com/primitives/docs/components/${t.do
       <div class="divider"></div>
     `).join(""),Ut=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>فاتورة #${we}</title>
 <style>
-@page{size:58mm auto;margin:3mm}
+@page{margin:3mm}
 *{box-sizing:border-box;margin:0;padding:0;color:#000!important;background:none!important}
-body{font-family:Arial,sans-serif;font-size:11px;width:52mm}
+html,body{width:100%;font-family:Arial,sans-serif;font-size:11px}
 .logo{font-size:18px;font-weight:900;text-align:center;letter-spacing:2px}
 .sub-logo{font-size:11px;text-align:center;margin-bottom:3px}
 .order-num{font-size:13px;font-weight:900;text-align:center;border:2px solid #000;padding:3px;margin:4px 0}
@@ -156,9 +156,9 @@ ${L.notes?`<hr class="dash"><div class="info">ملاحظة: ${L.notes}</div>`:""
       </tr>
     `).join(""),Ae=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Kitchen #${we}</title>
 <style>
-@page{size:58mm auto;margin:3mm}
+@page{margin:3mm}
 *{box-sizing:border-box;margin:0;padding:0;color:#000!important;background:none!important}
-body{font-family:Arial,sans-serif;font-size:11px;width:52mm}
+html,body{width:100%;font-family:Arial,sans-serif;font-size:11px}
 .header{text-align:center;font-size:9px;font-weight:bold;letter-spacing:2px;margin-bottom:2px}
 .order-box{border:3px solid #000;text-align:center;padding:4px;margin:3px 0}
 .order-box .label{font-size:10px;font-weight:900;letter-spacing:2px}
