@@ -15,6 +15,7 @@ export default function Dishes() {
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
 
   const [name, setName] = useState('');
+  const [nameEn, setNameEn] = useState('');
   const [price, setPrice] = useState('');
   const [cost, setCost] = useState('');
 
@@ -27,12 +28,13 @@ export default function Dishes() {
   };
 
   const resetForm = () => {
-    setName(''); setPrice(''); setCost(''); setEditingDish(null);
+    setName(''); setNameEn(''); setPrice(''); setCost(''); setEditingDish(null);
   };
 
   const handleEdit = (dish: Dish) => {
     setEditingDish(dish);
     setName(dish.name);
+    setNameEn(dish.nameEn || '');
     setPrice(dish.price.toString());
     setCost(dish.cost ? dish.cost.toString() : '');
     setShowForm(true);
@@ -42,6 +44,7 @@ export default function Dishes() {
     if (!name.trim() || !price) { alert(t('fillRequired')); return; }
     const dishData = {
       name: name.trim(),
+      nameEn: nameEn.trim() || undefined,
       price: parseFloat(price),
       cost: parseFloat(cost) || 0,
     };
@@ -88,9 +91,15 @@ export default function Dishes() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label className="text-xs">{t('dishName')} *</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} className="mt-1" placeholder="مثال: مكرونة بالدجاج" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">{t('dishName')} * (عربي)</Label>
+                <Input value={name} onChange={e => setName(e.target.value)} className="mt-1" placeholder="مثال: مكرونة بالدجاج" />
+              </div>
+              <div>
+                <Label className="text-xs">English Name 🍳</Label>
+                <Input value={nameEn} onChange={e => setNameEn(e.target.value)} className="mt-1" placeholder="e.g. Chicken Pasta" dir="ltr" />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -140,6 +149,9 @@ export default function Dishes() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate">{dish.name}</p>
+                      {dish.nameEn && (
+                        <p className="text-xs truncate" style={{ color: '#2563eb' }}>🍳 {dish.nameEn}</p>
+                      )}
                       {dish.cost > 0 && (
                         <p className="text-xs mt-0.5" style={{ color: '#A08B6D' }}>
                           {t('dishCost')}: {dish.cost.toFixed(3)} {t('omr')}

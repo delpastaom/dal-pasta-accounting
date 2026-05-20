@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { t } from '@/lib/i18n';
-import { OrderDB, ProductDB, ReportDB, type Order } from '@/lib/hybrid-db';
+import { OrderDB, ProductDB, ExpenseDB, type Order } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface DashboardStats {
@@ -38,16 +38,35 @@ export default function Dashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const thisMonth = await ReportDB.getThisMonthStats();
-      const todayOrders = await OrderDB.getToday();
-      const pendingBookings = await OrderDB.getPendingAdvance();
-      const lowStock = await ProductDB.getLowStock();
-      const allOrders = await OrderDB.getAll();
-      const recentOrders = allOrders.slice(0, 5);
-      const categoryBreakdown = await ReportDB.getCategoryBreakdown();
+      // استدعاء واحد للطلبات + استدعاءات متوازية للباقي
+      const [allOrders, expenses, lowStock] = await Promise.all([
+        OrderDB.getAll(),
+        ExpenseDB.getAll(),
+        ProductDB.getLowStock(),
+      ]);
 
       const today = new Date().toISOString().split('T')[0];
       const in7Days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+      const thisMonthKey = today.substring(0, 7);
+
+      // نحسب كل شي محلياً بدون استدعاءات إضافية
+      const todayOrders = allOrders.filter(o => o.orderDate === today);
+      const pendingBookings = allOrders.filter(o => o.type === 'advance' && o.status === 'pending');
+      const recentOrders = allOrders.slice(0, 5);
+
+      const monthOrders = allOrders.filter(o => o.deliveryDate.startsWith(thisMonthKey) && o.status === 'completed');
+      const monthExpenses = expenses.filter(e => e.date.startsWith(thisMonthKey));
+      const income = monthOrders.reduce((s, o) => s + o.total, 0);
+      const expTotal = monthExpenses.reduce((s, e) => s + e.amount, 0);
+      const avgOrder = monthOrders.length > 0 ? income / monthOrders.length : 0;
+
+      const catMap: Record<string, number> = {};
+      expenses.forEach(e => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
+      const totalExp = Object.values(catMap).reduce((s, v) => s + v, 0);
+      const categoryBreakdown = Object.entries(catMap)
+        .map(([category, amount]) => ({ category, amount, percentage: totalExp > 0 ? Math.round((amount / totalExp) * 100) : 0 }))
+        .sort((a, b) => b.amount - a.amount);
+
       const upcomingBookings = pendingBookings
         .filter(o => o.deliveryDate >= today && o.deliveryDate <= in7Days)
         .sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
@@ -55,17 +74,17 @@ export default function Dashboard() {
         .filter(o => o.deposit < o.total)
         .sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
 
-      const expenseRatio = thisMonth.income > 0 ? (thisMonth.expenses / thisMonth.income) * 100 : 0;
+      const expenseRatio = income > 0 ? (expTotal / income) * 100 : 0;
 
       setStats({
-        income: thisMonth.income,
-        expenses: thisMonth.expenses,
-        profit: thisMonth.income - thisMonth.expenses,
+        income,
+        expenses: expTotal,
+        profit: income - expTotal,
         todayOrders: todayOrders.length,
         pendingBookings: pendingBookings.length,
         lowStock: lowStock.length,
         expenseRatio,
-        avgOrder: thisMonth.avgOrder,
+        avgOrder,
         recentOrders,
         categoryBreakdown,
         upcomingBookings,

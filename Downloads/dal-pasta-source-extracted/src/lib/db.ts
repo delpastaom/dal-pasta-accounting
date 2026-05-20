@@ -1,6 +1,7 @@
 // Types
 export interface OrderItem {
   dishName: string;
+  dishNameEn?: string;
   quantity: number;
   price: number;
   cost: number;
@@ -135,9 +136,11 @@ export const SettingsDB = {
 // Orders
 export const OrderDB = {
   getAll(): Order[] {
-    return getItem<Order>(KEYS.orders, []).sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return getItem<Order>(KEYS.orders, []).sort((a, b) => {
+      const dateDiff = b.deliveryDate.localeCompare(a.deliveryDate);
+      if (dateDiff !== 0) return dateDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   },
   add(order: Omit<Order, 'id' | 'createdAt'>): Order {
     const orders = this.getAll();

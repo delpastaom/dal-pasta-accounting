@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { t } from '@/lib/i18n';
 import { OrderDB, DishDB, CustomerDB, type Order, type OrderItem, type Customer } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [dishes, setDishes] = useState<{ id: string; name: string; price: number; cost: number }[]>([]);
+  const [dishes, setDishes] = useState<{ id: string; name: string; nameEn?: string; price: number; cost: number }[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerList, setShowCustomerList] = useState(false);
@@ -99,6 +99,32 @@ export default function Orders() {
       } else {
         await OrderDB.add(orderData);
       }
+
+      // حفظ/تحديث بيانات الزبون تلقائياً عند كل طلب
+      if (customerName.trim()) {
+        const allCustomers = await CustomerDB.getAll();
+        const existing = allCustomers.find(c =>
+          c.name === customerName.trim() ||
+          (customerPhone.trim() && c.phone === customerPhone.trim())
+        );
+        if (existing) {
+          // تحديث بياناته بأحدث معلومة
+          await CustomerDB.update(existing.id, {
+            name: customerName.trim(),
+            phone: customerPhone.trim() || existing.phone,
+            area: area.trim() || existing.area,
+          });
+        } else {
+          // زبون جديد — أضفه تلقائياً
+          await CustomerDB.add({
+            name: customerName.trim(),
+            phone: customerPhone.trim(),
+            area: area.trim(),
+            notes: '',
+          });
+        }
+      }
+
       await loadData();
       if (andNew) { resetForm(); } else { resetForm(); setShowForm(false); }
     } catch (e) {
@@ -106,10 +132,15 @@ export default function Orders() {
     }
   };
 
-  const getOrderNum = (order: Order) => {
+  // يُحسب مرة واحدة عند تغيّر الطلبات — O(n log n) بدل O(n² log n)
+  const orderNumMap = useMemo(() => {
     const sorted = [...orders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    return sorted.findIndex(o => o.id === order.id) + 1;
-  };
+    const map = new Map<string, number>();
+    sorted.forEach((o, i) => map.set(o.id, i + 1));
+    return map;
+  }, [orders]);
+
+  const getOrderNum = (order: Order) => orderNumMap.get(order.id) ?? 0;
 
   const shareWhatsApp = (order: Order) => {
     const num = getOrderNum(order);
@@ -139,52 +170,62 @@ export default function Orders() {
   const printCustomerReceipt = (order: Order) => {
     const num = getOrderNum(order);
     const balance = order.total - order.deposit;
+    const fmt = (n: number) => n.toFixed(3);
     const itemRows = order.items.map(i => `
-      <div class="item-row">
-        <span class="item-name">${i.dishName}</span>
-        <span class="item-qty">x${i.quantity}</span>
+      <div class="item-name">${i.dishName}</div>
+      <div class="item-calc">
+        <span class="unit-price">${fmt(i.price)} ر.ع</span>
+        <span class="multiply"> × ${i.quantity} = </span>
+        <span class="total-price">${fmt(i.price * i.quantity)} ر.ع</span>
       </div>
-      <div class="item-price">${i.price.toFixed(3)} × ${i.quantity} = <b>${(i.price * i.quantity).toFixed(3)} ر.ع</b></div>
-    `).join('<div class="divider"></div>');
+      <div class="divider"></div>
+    `).join('');
     const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>فاتورة #${num}</title>
 <style>
-@page{size:80mm auto;margin:4mm}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;font-size:12px;color:#000;width:72mm}
-.center{text-align:center}
-.logo{font-size:18px;font-weight:bold;text-align:center;margin:4px 0}
-.order-num{font-size:15px;font-weight:bold;text-align:center;border:2px solid #000;padding:3px;margin:4px 0;letter-spacing:1px}
-.dash{border:none;border-top:1px dashed #000;margin:5px 0}
-.info{font-size:12px;margin:2px 0}
-.info b{font-size:13px}
-.item-row{display:flex;justify-content:space-between;font-size:13px;font-weight:bold;margin-top:4px}
-.item-qty{font-size:14px;font-weight:bold}
-.item-price{font-size:11px;color:#333;margin-bottom:3px}
-.divider{border-top:1px dotted #ccc;margin:3px 0}
-.total-row{display:flex;justify-content:space-between;font-size:14px;font-weight:bold;margin:3px 0}
-.balance-row{display:flex;justify-content:space-between;font-size:13px;font-weight:bold;color:#c00;margin:2px 0}
+@page{margin:3mm}
+*{box-sizing:border-box;margin:0;padding:0;color:#000!important;background:none!important}
+html,body{width:100%;font-family:Arial,sans-serif;font-size:11px}
+.logo{font-size:18px;font-weight:900;text-align:center;letter-spacing:2px}
+.sub-logo{font-size:11px;text-align:center;margin-bottom:3px}
+.order-num{font-size:13px;font-weight:900;text-align:center;border:2px solid #000;padding:3px;margin:4px 0}
+.dash{border:none;border-top:1px dashed #000;margin:4px 0}
+.solid{border:none;border-top:2px solid #000;margin:5px 0}
+.customer-name{font-size:13px;font-weight:900;margin:2px 0}
+.info{font-size:10px;margin:1px 0}
+.item-name{font-size:12px;font-weight:900;margin-top:4px}
+.item-calc{font-size:11px;margin:1px 0 3px;display:flex;justify-content:space-between}
+.unit-price{color:#000}
+.multiply{color:#000}
+.total-price{font-weight:900}
+.divider{border-top:1px dotted #000;margin:2px 0}
+.row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+.row-grand{display:flex;justify-content:space-between;font-size:14px;font-weight:900;padding:3px 0;border-top:2px solid #000;border-bottom:2px solid #000;margin:3px 0}
+.row-balance{display:flex;justify-content:space-between;font-size:12px;font-weight:900;padding:2px 0;text-decoration:underline}
 .footer{text-align:center;font-size:10px;margin-top:6px}
 </style></head>
 <body>
-<div class="logo">🍽️ دل باستا</div>
-<div class="order-num">طلب رقم #${num}</div>
+<div class="logo">Del Pasta</div>
+<div class="sub-logo">مشروع منزلي · صحار</div>
+<div class="sub-logo">90942558</div>
+<div class="order-num">طلب رقم  #${num}</div>
 <hr class="dash">
-<div class="info"><b>${order.customerName}</b></div>
-${order.customerPhone ? `<div class="info">📞 ${order.customerPhone}</div>` : ''}
-${order.area ? `<div class="info">📍 ${order.area}</div>` : ''}
-<div class="info">📅 تاريخ التسليم: <b>${order.deliveryDate}</b></div>
+<div class="customer-name">${order.customerName}</div>
+${order.customerPhone ? `<div class="info">${order.customerPhone}</div>` : ''}
+${order.area ? `<div class="info">${order.area}</div>` : ''}
+<div class="info">التسليم: <b>${order.deliveryDate}</b></div>
 <hr class="dash">
 ${itemRows}
-<hr class="dash">
-${order.deliveryFee > 0 ? `<div class="total-row"><span>توصيل</span><span>${order.deliveryFee.toFixed(3)} ر.ع</span></div>` : ''}
-<div class="total-row"><span>الإجمالي</span><span>${order.total.toFixed(3)} ر.ع</span></div>
+<hr class="solid">
+${order.deliveryFee > 0 ? `<div class="row"><span>توصيل</span><span>${fmt(order.deliveryFee)} ر.ع</span></div>` : ''}
+<div class="row-grand"><span>الإجمالي</span><span>${fmt(order.total)} ر.ع</span></div>
 ${order.deposit > 0 ? `
-<div class="total-row" style="font-size:12px;font-weight:normal"><span>العربون المدفوع</span><span>${order.deposit.toFixed(3)} ر.ع</span></div>
-<div class="balance-row"><span>المبلغ المتبقي</span><span>${balance.toFixed(3)} ر.ع</span></div>` : ''}
-${order.notes ? `<hr class="dash"><div class="info">📝 ${order.notes}</div>` : ''}
+<div class="row"><span>العربون المدفوع</span><span>- ${fmt(order.deposit)} ر.ع</span></div>
+<div class="row-balance"><span>المبلغ المتبقي</span><span>${fmt(balance)} ر.ع</span></div>` : ''}
+${order.notes ? `<hr class="dash"><div class="info">ملاحظة: ${order.notes}</div>` : ''}
 <hr class="dash">
-<div class="footer">شكراً لكم 🙏</div>
-<script>window.onload=()=>window.print()</script>
+<div class="footer">شكراً لكم 🤍</div>
+<div class="footer" style="font-size:9px;margin-top:2px">أكل متروس لذة من 2018</div>
+<script>window.onload=()=>{window.print();window.addEventListener('afterprint',()=>window.close());}</script>
 </body></html>`;
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
@@ -193,25 +234,30 @@ ${order.notes ? `<hr class="dash"><div class="info">📝 ${order.notes}</div>` :
   const printKitchenTicket = (order: Order) => {
     const num = getOrderNum(order);
     const itemRows = order.items.map(i => `
-      <div class="item">${i.dishName}</div>
-      <div class="qty">× ${i.quantity}</div>
-      <hr class="dash">
+      <tr>
+        <td class="td-item">${i.dishNameEn || i.dishName}${i.dishNameEn ? `<div class="td-ar">${i.dishName}</div>` : ''}</td>
+        <td class="td-qty">x${i.quantity}</td>
+      </tr>
     `).join('');
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Kitchen #${num}</title>
 <style>
-@page{size:80mm auto;margin:4mm}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;font-size:12px;color:#000;width:72mm}
-.header{text-align:center;font-size:11px;font-weight:bold;letter-spacing:2px;margin-bottom:3px}
-.order-box{border:3px solid #000;text-align:center;padding:4px;margin:4px 0}
-.order-box .label{font-size:11px;font-weight:bold}
-.order-box .num{font-size:32px;font-weight:bold;line-height:1}
-.info{font-size:13px;font-weight:bold;margin:2px 0}
-.info-sub{font-size:11px;color:#333;margin:1px 0}
-.dash{border:none;border-top:1px dashed #000;margin:5px 0}
-.item{font-size:16px;font-weight:bold;margin-top:5px}
-.qty{font-size:20px;font-weight:bold;text-align:right;margin-bottom:3px}
-.footer{text-align:center;font-size:10px;margin-top:6px;letter-spacing:1px}
+@page{margin:3mm}
+*{box-sizing:border-box;margin:0;padding:0;color:#000!important;background:none!important}
+html,body{width:100%;font-family:Arial,sans-serif;font-size:11px}
+.header{text-align:center;font-size:9px;font-weight:bold;letter-spacing:2px;margin-bottom:2px}
+.order-box{border:3px solid #000;text-align:center;padding:4px;margin:3px 0}
+.order-box .label{font-size:10px;font-weight:900;letter-spacing:2px}
+.order-box .num{font-size:36px;font-weight:900;line-height:1}
+.dash{border:none;border-top:1px dashed #000;margin:4px 0}
+.solid{border:none;border-top:2px solid #000;margin:4px 0}
+.info{font-size:12px;font-weight:900;margin:2px 0}
+.info-sub{font-size:10px;margin:1px 0}
+table{width:100%;border-collapse:collapse}
+.td-item{font-size:14px;font-weight:900;padding:4px 0 2px}
+.td-ar{font-size:9px;font-weight:normal;margin-top:1px}
+.td-qty{font-size:18px;font-weight:900;text-align:right;vertical-align:middle;white-space:nowrap}
+tr{border-bottom:1px dashed #000}
+.footer{text-align:center;font-size:9px;letter-spacing:2px;margin-top:6px}
 </style></head>
 <body>
 <div class="header">-- KITCHEN TICKET --</div>
@@ -221,14 +267,14 @@ body{font-family:Arial,sans-serif;font-size:12px;color:#000;width:72mm}
 </div>
 <hr class="dash">
 <div class="info">${order.customerName}</div>
-${order.area ? `<div class="info-sub">📍 ${order.area}</div>` : ''}
-${order.customerPhone ? `<div class="info-sub">📞 ${order.customerPhone}</div>` : ''}
-<div class="info-sub">📅 Delivery: <b>${order.deliveryDate}</b></div>
+${order.area ? `<div class="info-sub">${order.area}</div>` : ''}
+<div class="info-sub">Delivery: <b>${order.deliveryDate}</b></div>
+<hr class="solid">
+<table>${itemRows}</table>
+${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.notes}</div>` : ''}
 <hr class="dash">
-${itemRows}
-${order.notes ? `<div class="info-sub"><b>Notes:</b> ${order.notes}</div><hr class="dash">` : ''}
 <div class="footer">DAL PASTA KITCHEN</div>
-<script>window.onload=()=>window.print()</script>
+<script>window.onload=()=>{window.print();window.addEventListener('afterprint',()=>window.close());}</script>
 </body></html>`;
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
@@ -238,13 +284,13 @@ ${order.notes ? `<div class="info-sub"><b>Notes:</b> ${order.notes}</div><hr cla
     try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e) {}
   };
 
-  const addDishItem = (dish: { name: string; price: number; cost: number }) => {
+  const addDishItem = (dish: { name: string; nameEn?: string; price: number; cost: number }) => {
     setItems(prev => {
       const existing = prev.find(i => i.dishName === dish.name);
       if (existing) {
         return prev.map(i => i.dishName === dish.name ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { dishName: dish.name, quantity: 1, price: dish.price, cost: dish.cost }];
+      return [...prev, { dishName: dish.name, dishNameEn: dish.nameEn, quantity: 1, price: dish.price, cost: dish.cost }];
     });
     setShowDishPicker(false);
   };
@@ -277,13 +323,13 @@ ${order.notes ? `<div class="info-sub"><b>Notes:</b> ${order.notes}</div><hr cla
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const grandTotal = subtotal + deliveryFee;
 
-  const filteredOrders = orders.filter(o => {
+  const filteredOrders = useMemo(() => orders.filter(o => {
     const matchStatus = filterStatus === 'all' || o.status === filterStatus;
     const matchSearch = !searchQuery ||
       o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.customerPhone.includes(searchQuery);
     return matchStatus && matchSearch;
-  });
+  }), [orders, filterStatus, searchQuery]);
 
   if (loading && orders.length === 0) {
     return (
@@ -331,15 +377,9 @@ ${order.notes ? `<div class="info-sub"><b>Notes:</b> ${order.notes}</div><hr cla
                         {c.phone && <span className="text-gray-400 mr-2 text-xs">{c.phone}</span>}
                       </button>
                     ))}
-                    <button type="button"
-                      onClick={async () => {
-                        await CustomerDB.add({ name: customerName, phone: customerPhone, area, notes: '' });
-                        setCustomers(await CustomerDB.getAll());
-                        setShowCustomerList(false);
-                      }}
-                      className="w-full text-right px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 font-medium">
-                      + حفظ "{customerName}" كزبون جديد
-                    </button>
+                    <div className="w-full text-right px-3 py-2 text-xs" style={{ color: '#A08B6D' }}>
+                      يُحفظ تلقائياً عند حفظ الطلب ✓
+                    </div>
                   </div>
                 )}
               </div>
@@ -390,33 +430,58 @@ ${order.notes ? `<div class="info-sub"><b>Notes:</b> ${order.notes}</div><hr cla
               {items.length === 0 && <p className="text-sm text-center py-4" style={{ color: '#8B7355' }}>No items added</p>}
             </div>
 
-            <Dialog open={showDishPicker} onOpenChange={setShowDishPicker}>
+            <Dialog open={showDishPicker} onOpenChange={open => { setShowDishPicker(open); if (!open) { setManualDishName(''); setManualDishPrice(''); setSaveForFuture(false); } }}>
               <DialogContent>
                 <DialogHeader><DialogTitle>إضافة صنف</DialogTitle></DialogHeader>
                 <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input placeholder="اسم الطبق" value={manualDishName} onChange={e => setManualDishName(e.target.value)} className="flex-1" />
-                    <Input placeholder="السعر" type="number" step="0.1" min="0" value={manualDishPrice} onChange={e => setManualDishPrice(e.target.value)} className="w-24" />
-                  </div>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" checked={saveForFuture} onChange={e => setSaveForFuture(e.target.checked)} />
-                    احفظ للمرة القادمة
-                  </label>
-                  <Button onClick={addManualDish} className="w-full" style={{ background: '#E5A53C' }}>إضافة</Button>
-                  {dishes.length > 0 && (
-                    <>
-                      <p className="text-xs text-center" style={{ color: '#8B7355' }}>── أو اختر من المحفوظ ──</p>
-                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-auto">
-                        {dishes.map(dish => (
+
+                  {/* بحث / اسم الصنف */}
+                  <Input
+                    placeholder="🔍 ابحث أو اكتب اسم صنف جديد..."
+                    value={manualDishName}
+                    onChange={e => setManualDishName(e.target.value)}
+                    autoFocus
+                  />
+
+                  {/* قائمة الأصناف المحفوظة — مفلترة */}
+                  {dishes.length > 0 && (() => {
+                    const filtered = dishes.filter(d =>
+                      !manualDishName || d.name.includes(manualDishName) || (d.nameEn || '').toLowerCase().includes(manualDishName.toLowerCase())
+                    );
+                    return filtered.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-1 max-h-52 overflow-auto rounded-lg border border-amber-100">
+                        {filtered.map(dish => (
                           <button key={dish.id} onClick={() => addDishItem(dish)}
-                            className="flex items-center justify-between p-3 rounded-lg hover:bg-amber-50 transition-colors text-right">
-                            <span className="text-sm font-bold" style={{ color: '#E5A53C' }}>{dish.price.toFixed(2)} ر.ع</span>
-                            <span className="font-medium">{dish.name}</span>
+                            className="flex items-center justify-between px-3 py-2.5 hover:bg-amber-50 transition-colors text-right border-b border-amber-50 last:border-0">
+                            <span className="text-sm font-bold" style={{ color: '#E5A53C' }}>{dish.price.toFixed(3)} ر.ع</span>
+                            <div className="text-right">
+                              <span className="font-medium text-sm">{dish.name}</span>
+                              {dish.nameEn && <span className="text-xs block" style={{ color: '#8B7355' }}>{dish.nameEn}</span>}
+                            </div>
                           </button>
                         ))}
                       </div>
-                    </>
+                    ) : null;
+                  })()}
+
+                  {/* صنف جديد — يظهر فقط لو في اسم مكتوب ومو موجود في القائمة */}
+                  {manualDishName && !dishes.some(d => d.name === manualDishName) && (
+                    <div className="space-y-2 pt-1 border-t border-dashed border-amber-200">
+                      <p className="text-xs" style={{ color: '#8B7355' }}>صنف جديد — أضف السعر:</p>
+                      <div className="flex gap-2">
+                        <Input placeholder="السعر ر.ع" type="number" step="0.001" min="0" value={manualDishPrice} onChange={e => setManualDishPrice(e.target.value)} className="flex-1" />
+                        <label className="flex items-center gap-1.5 text-xs cursor-pointer whitespace-nowrap">
+                          <input type="checkbox" checked={saveForFuture} onChange={e => setSaveForFuture(e.target.checked)} />
+                          احفظه
+                        </label>
+                      </div>
+                      <Button onClick={addManualDish} className="w-full" style={{ background: '#E5A53C' }}
+                        disabled={!manualDishPrice}>
+                        + إضافة "{manualDishName}"
+                      </Button>
+                    </div>
                   )}
+
                 </div>
               </DialogContent>
             </Dialog>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route } from 'react-router';
+import { Routes, Route, useNavigate } from 'react-router';
 import PinLock from '@/components/PinLock';
 import Layout from '@/components/Layout';
 import Dashboard from '@/pages/Dashboard';
@@ -15,6 +15,7 @@ import { seedData, isCloudConnected } from '@/lib/hybrid-db';
 export default function App() {
   const [locked, setLocked] = useState(true);
   const [cloudConnected, setCloudConnected] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setCloudConnected(isCloudConnected());
@@ -23,7 +24,8 @@ export default function App() {
 
   const handleUnlock = useCallback(() => {
     setLocked(false);
-  }, []);
+    navigate('/');
+  }, [navigate]);
 
   const handleLogout = useCallback(() => {
     setLocked(true);

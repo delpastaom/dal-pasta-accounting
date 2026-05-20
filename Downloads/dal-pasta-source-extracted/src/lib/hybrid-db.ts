@@ -59,6 +59,7 @@ export interface Product {
 export interface Dish {
   id: string;
   name: string;
+  nameEn?: string;
   price: number;
   cost: number;
   createdAt: string;
@@ -119,6 +120,7 @@ function rowToDish(row: any): Dish {
   return {
     id: row.id,
     name: row.name || '',
+    nameEn: row.name_en || undefined,
     price: row.price || 0,
     cost: row.cost || 0,
     createdAt: row.created_at || new Date().toISOString(),
@@ -151,7 +153,7 @@ export const OrderDB = {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+        const { data, error } = await sb.from('orders').select('*').order('delivery_date', { ascending: false }).order('created_at', { ascending: false });
         if (!error && data) return (data as any[]).map(rowToOrder);
       }
     }
@@ -365,7 +367,9 @@ export const DishDB = {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('dishes').insert({ name: dish.name, price: dish.price, cost: dish.cost }).select().single();
+        const insertData: any = { name: dish.name, price: dish.price, cost: dish.cost };
+        if (dish.nameEn) insertData.name_en = dish.nameEn;
+        const { data, error } = await sb.from('dishes').insert(insertData).select().single();
         if (!error && data) return rowToDish(data);
       }
     }
@@ -378,6 +382,7 @@ export const DishDB = {
       if (sb) {
         const updateData: any = {};
         if (dish.name !== undefined) updateData.name = dish.name;
+        if (dish.nameEn !== undefined) updateData.name_en = dish.nameEn;
         if (dish.price !== undefined) updateData.price = dish.price;
         if (dish.cost !== undefined) updateData.cost = dish.cost;
         const { error } = await sb.from('dishes').update(updateData).eq('id', id);
