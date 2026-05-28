@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-const EXPENSE_CATEGORIES = ['monthly','operational','maintenance','advertising','development','electricity','water','internet','gas','fuel','salary','groceries','packaging','other'];
+const EXPENSE_CATEGORIES = ['monthly','operational','maintenance','advertising','development','electricity','water','internet','gas','fuel','salary','courier','groceries','packaging','other'];
 
 export default function Expenses() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
