@@ -492,11 +492,12 @@ export const ReportDB = {
     return Object.values(months).sort((a, b) => a.month.localeCompare(b.month));
   },
 
-  async getCategoryBreakdown() {
+  async getCategoryBreakdown(month?: string) {
     const expenses = await ExpenseDB.getAll();
+    const filtered = month ? expenses.filter(e => e.date.startsWith(month)) : expenses;
     const categories: Record<string, number> = {};
     let total = 0;
-    expenses.forEach(e => { categories[e.category] = (categories[e.category] || 0) + e.amount; total += e.amount; });
+    filtered.forEach(e => { categories[e.category] = (categories[e.category] || 0) + e.amount; total += e.amount; });
     return Object.entries(categories).map(([category, amount]) => ({
       category, amount, percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
     })).sort((a, b) => b.amount - a.amount);

@@ -4,9 +4,11 @@ import { ReportDB, type MonthlyData } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Reports() {
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [stats, setStats] = useState({ income: 0, expenses: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0 });
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   useEffect(() => {
     loadData();
@@ -32,13 +34,13 @@ export default function Reports() {
   const expenseRatio = stats.income > 0 ? (stats.expenses / stats.income) * 100 : 0;
   const maxVal = Math.max(...monthlyData.map((d: MonthlyData) => Math.max(d.income, d.expenses)), 1);
 
-  // Load category breakdown and top dishes after initial render
+  // Load category breakdown and top dishes after initial render or month change
   useEffect(() => {
     if (!loading) {
-      ReportDB.getCategoryBreakdown().then(setCategoryBreakdownDynamic);
+      ReportDB.getCategoryBreakdown(selectedMonth).then(setCategoryBreakdownDynamic);
       ReportDB.getTopDishes().then(setTopDishesDynamic);
     }
-  }, [loading]);
+  }, [loading, selectedMonth]);
 
   const [categoryBreakdownDynamic, setCategoryBreakdownDynamic] = useState<{ category: string; amount: number; percentage: number }[]>([]);
   const [topDishesDynamic, setTopDishesDynamic] = useState<{ name: string; count: number; revenue: number }[]>([]);
@@ -117,10 +119,28 @@ export default function Reports() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">{t('byCategory')}</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base">{t('byCategory')}</CardTitle>
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="text-xs rounded-lg border border-input px-2 py-1.5 bg-background"
+            >
+              {monthlyData.map(d => (
+                <option key={d.month} value={d.month}>{d.month}</option>
+              ))}
+            </select>
+          </div>
+        </CardHeader>
         <CardContent>
-          {categoryBreakdownDynamic.length === 0 ? (<p className="text-center text-sm py-4" style={{ color: '#8B7355' }}>{t('noExpenses')}</p>) : (
+          {categoryBreakdownDynamic.length === 0 ? (
+            <p className="text-center text-sm py-4" style={{ color: '#8B7355' }}>{t('noExpenses')}</p>
+          ) : (
             <div className="space-y-3">
+              <p className="text-xs font-medium pb-1" style={{ color: '#8B7355' }}>
+                {t('expenses')} {selectedMonth}: {categoryBreakdownDynamic.reduce((s, c) => s + c.amount, 0).toFixed(2)} {t('omr')}
+              </p>
               {categoryBreakdownDynamic.map(cat => (
                 <div key={cat.category}>
                   <div className="flex justify-between text-sm mb-1"><span className="font-medium">{t(cat.category as any)}</span><span className="font-bold">{cat.amount.toFixed(2)} {t('omr')} ({cat.percentage}%)</span></div>
