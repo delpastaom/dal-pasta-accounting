@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 export default function Reports() {
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
-  const [stats, setStats] = useState({ income: 0, expenses: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0 });
+  const [stats, setStats] = useState({ income: 0, expenses: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0, deliveryFees: 0 });
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
@@ -24,6 +24,7 @@ export default function Reports() {
         income: thisMonth.income, expenses: thisMonth.expenses, profit,
         orders: thisMonth.orders, avgOrder: thisMonth.avgOrder,
         profitMargin: thisMonth.income > 0 ? (profit / thisMonth.income) * 100 : 0,
+        deliveryFees: thisMonth.deliveryFees || 0,
       });
     } catch (e) {}
     setLoading(false);
@@ -65,6 +66,22 @@ export default function Reports() {
         ))}
       </div>
 
+      {/* Delivery Fees Card */}
+      <Card style={{ border: '1px solid #fbbf24' }}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium" style={{ color: '#8B7355' }}>🚗 رسوم التوصيل — الشهر الحالي</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: '#d97706' }}>{stats.deliveryFees.toFixed(2)} {t('omr')}</p>
+            </div>
+            <div className="text-right text-xs" style={{ color: '#8B7355' }}>
+              <p>من {stats.orders} طلب مكتمل</p>
+              {stats.orders > 0 && <p className="mt-1">معدل/طلب: {(stats.deliveryFees / stats.orders).toFixed(2)} {t('omr')}</p>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {expenseRatio > 70 && (
         <div className={`rounded-xl p-4 ${expenseRatio > 80 ? 'animate-pulse-warn' : ''}`} style={{ background: expenseRatio > 80 ? '#fee2e2' : '#fef3c7', border: `1px solid ${expenseRatio > 80 ? '#f87171' : '#fbbf24'}` }}>
           <div className="flex items-center gap-2"><span>⚠️</span><p className="font-bold text-sm" style={{ color: expenseRatio > 80 ? '#991b1b' : '#92400e' }}>{expenseRatio > 80 ? t('warning80') : t('warning70')}</p></div>
@@ -95,25 +112,35 @@ export default function Reports() {
         <CardHeader className="pb-2"><CardTitle className="text-base">{t('monthlyTrend')}</CardTitle></CardHeader>
         <CardContent>
           {monthlyData.length === 0 ? (<p className="text-center text-sm py-4" style={{ color: '#8B7355' }}>No data available</p>) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {monthlyData.slice(-6).map((data: MonthlyData) => (
                 <div key={data.month}>
-                  <div className="flex justify-between text-xs mb-1"><span className="font-medium">{data.month}</span><span style={{ color: '#8B7355' }}>{data.orders} {t('orders')}</span></div>
-                  <div className="flex gap-1 h-6">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium">{data.month}</span>
+                    <span style={{ color: '#8B7355' }}>{data.orders} {t('orders')}</span>
+                  </div>
+                  <div className="flex gap-1 h-5">
                     <div className="h-full rounded-l-md transition-all relative group" style={{ width: `${(data.income / maxVal) * 100}%`, background: 'linear-gradient(90deg, #16a34a, #22c55e)' }}>
                       <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 text-[10px] bg-black text-white px-1.5 py-0.5 rounded whitespace-nowrap transition-opacity">{t('income')}: {data.income.toFixed(1)}</div>
                     </div>
-                    <div className="h-full rounded-r-md transition-all relative group" style={{ width: `${(data.expenses / maxVal) * 100}%`, background: 'linear-gradient(90deg, #dc2626, #ef4444)' }}>
+                    <div className="h-full transition-all relative group" style={{ width: `${(data.expenses / maxVal) * 100}%`, background: 'linear-gradient(90deg, #dc2626, #ef4444)' }}>
                       <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 text-[10px] bg-black text-white px-1.5 py-0.5 rounded whitespace-nowrap transition-opacity">{t('expenses')}: {data.expenses.toFixed(1)}</div>
                     </div>
+                    <div className="h-full rounded-r-md transition-all relative group" style={{ width: `${((data.deliveryFees || 0) / maxVal) * 100}%`, background: 'linear-gradient(90deg, #d97706, #f59e0b)' }}>
+                      <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 text-[10px] bg-black text-white px-1.5 py-0.5 rounded whitespace-nowrap transition-opacity">🚗 توصيل: {(data.deliveryFees || 0).toFixed(1)}</div>
+                    </div>
                   </div>
+                  <p className="text-[10px] mt-1" style={{ color: '#d97706' }}>
+                    🚗 {(data.deliveryFees || 0).toFixed(2)} {t('omr')}
+                  </p>
                 </div>
               ))}
             </div>
           )}
-          <div className="flex gap-4 mt-4 justify-center">
+          <div className="flex gap-4 mt-4 justify-center flex-wrap">
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ background: '#16a34a' }} /><span className="text-xs">{t('income')}</span></div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ background: '#dc2626' }} /><span className="text-xs">{t('expenses')}</span></div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ background: '#d97706' }} /><span className="text-xs">🚗 توصيل</span></div>
           </div>
         </CardContent>
       </Card>

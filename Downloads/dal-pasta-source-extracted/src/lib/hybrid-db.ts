@@ -70,6 +70,7 @@ export interface MonthlyData {
   income: number;
   expenses: number;
   orders: number;
+  deliveryFees: number;
 }
 
 function rowToOrder(row: any): Order {
@@ -481,12 +482,14 @@ export const ReportDB = {
     const months: Record<string, MonthlyData> = {};
     orders.forEach(o => {
       const month = o.deliveryDate.substring(0, 7);
-      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0 };
-      months[month].income += o.total; months[month].orders += 1;
+      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0 };
+      months[month].income += o.total;
+      months[month].orders += 1;
+      months[month].deliveryFees += o.deliveryFee || 0;
     });
     expenses.forEach(e => {
       const month = e.date.substring(0, 7);
-      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0 };
+      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0 };
       months[month].expenses += e.amount;
     });
     return Object.values(months).sort((a, b) => a.month.localeCompare(b.month));
@@ -522,7 +525,8 @@ export const ReportDB = {
     const orders = (await OrderDB.getAll()).filter(o => o.deliveryDate.startsWith(month) && o.status === 'completed');
     const expenses = (await ExpenseDB.getAll()).filter(e => e.date.startsWith(month));
     const income = orders.reduce((s, o) => s + o.total, 0);
-    return { income, expenses: expenses.reduce((s, e) => s + e.amount, 0), orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0 };
+    const deliveryFees = orders.reduce((s, o) => s + (o.deliveryFee || 0), 0);
+    return { income, expenses: expenses.reduce((s, e) => s + e.amount, 0), orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0, deliveryFees };
   },
 };
 
