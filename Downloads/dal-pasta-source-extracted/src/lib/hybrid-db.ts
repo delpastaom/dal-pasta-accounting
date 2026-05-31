@@ -13,6 +13,7 @@ export interface Order {
   orderDate: string;
   deliveryDate: string;
   type: 'regular' | 'advance';
+  deliveryTime?: string;
   items: OrderItem[];
   deliveryFee: number;
   deposit: number;
@@ -82,6 +83,7 @@ function rowToOrder(row: any): Order {
     orderDate: row.order_date || '',
     deliveryDate: row.delivery_date || '',
     type: row.type || 'regular',
+    deliveryTime: row.delivery_time || undefined,
     items: (row.items || []) as OrderItem[],
     deliveryFee: row.delivery_fee || 0,
     deposit: row.deposit || 0,
@@ -171,6 +173,7 @@ export const OrderDB = {
           area: order.area,
           order_date: order.orderDate,
           delivery_date: order.deliveryDate,
+          delivery_time: order.deliveryTime || null,
           type: order.type,
           items: order.items,
           delivery_fee: order.deliveryFee,
@@ -195,6 +198,7 @@ export const OrderDB = {
         if (order.area !== undefined) updateData.area = order.area;
         if (order.orderDate !== undefined) updateData.order_date = order.orderDate;
         if (order.deliveryDate !== undefined) updateData.delivery_date = order.deliveryDate;
+        if (order.deliveryTime !== undefined) updateData.delivery_time = order.deliveryTime || null;
         if (order.type !== undefined) updateData.type = order.type;
         if (order.items !== undefined) updateData.items = order.items;
         if (order.deliveryFee !== undefined) updateData.delivery_fee = order.deliveryFee;

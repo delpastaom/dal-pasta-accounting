@@ -269,6 +269,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-left flex-shrink-0 mr-3">
                       <p className="font-bold text-sm" style={{ color: '#E5A53C' }}>{order.deliveryDate}</p>
+                      {order.deliveryTime && <p className="text-xs font-bold" style={{ color: '#d97706' }}>⏰ {order.deliveryTime}</p>}
                       <p className="text-xs" style={{ color: daysLeft <= 1 ? '#dc2626' : daysLeft <= 3 ? '#d97706' : '#16a34a' }}>
                         {daysLeft === 0 ? '⚡ اليوم' : daysLeft === 1 ? '⚠️ غداً' : `${daysLeft} أيام`}
                       </p>

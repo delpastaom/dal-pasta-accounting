@@ -27,6 +27,7 @@ export default function Orders() {
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
   const [orderType, setOrderType] = useState<'regular' | 'advance'>('regular');
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [deliveryTime, setDeliveryTime] = useState('');
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deposit, setDeposit] = useState(0);
   const [notes, setNotes] = useState('');
@@ -58,7 +59,7 @@ export default function Orders() {
     setCustomerName(''); setCustomerPhone(''); setArea('');
     setOrderDate(new Date().toISOString().split('T')[0]);
     setDeliveryDate(new Date().toISOString().split('T')[0]);
-    setOrderType('regular'); setItems([]); setDeliveryFee(0);
+    setOrderType('regular'); setItems([]); setDeliveryTime(''); setDeliveryFee(0);
     setDeposit(0); setNotes(''); setStatus('pending'); setEditingOrder(null);
   };
 
@@ -70,6 +71,7 @@ export default function Orders() {
     setOrderDate(order.orderDate);
     setDeliveryDate(order.deliveryDate);
     setOrderType(order.type);
+    setDeliveryTime(order.deliveryTime || '');
     setItems([...order.items]);
     setDeliveryFee(order.deliveryFee);
     setDeposit(order.deposit);
@@ -88,7 +90,9 @@ export default function Orders() {
 
     const orderData = {
       customerName: customerName.trim(), customerPhone: customerPhone.trim(),
-      area: area.trim(), orderDate, deliveryDate, type: orderType,
+      area: area.trim(), orderDate, deliveryDate,
+      deliveryTime: orderType === 'advance' ? (deliveryTime || undefined) : undefined,
+      type: orderType,
       items: [...items], deliveryFee, deposit: orderType === 'advance' ? deposit : 0,
       total, status, notes: notes.trim(),
     };
@@ -391,6 +395,14 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
               <div><Label className="text-xs">{t('deliveryDate')}</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="mt-1" /></div>
             </div>
 
+            {orderType === 'advance' && (
+              <div className="p-3 rounded-lg" style={{ background: '#fef3c7', border: '1px solid #fbbf24' }}>
+                <Label className="text-xs font-bold" style={{ color: '#92400e' }}>⏰ {t('deliveryTime')} (للحجز المسبق)</Label>
+                <Input type="time" value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} className="mt-1 w-40" />
+                {deliveryTime && <p className="text-xs mt-1" style={{ color: '#92400e' }}>التسليم: {deliveryDate} الساعة {deliveryTime}</p>}
+              </div>
+            )}
+
             <div>
               <Label className="text-xs">{t('orderType')}</Label>
               <div className="flex gap-3 mt-1">
@@ -544,7 +556,11 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
                       }`}>{t(order.status)}</span>
                     </div>
                     <p className="text-xs mt-1" style={{ color: '#8B7355' }}>{order.items.map(i => `${i.dishName} x${i.quantity}`).join(', ')}</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#A08B6D' }}>{order.area} · {order.deliveryDate} {order.customerPhone && `· ${order.customerPhone}`}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#A08B6D' }}>
+                      {order.area} · {order.deliveryDate}
+                      {order.type === 'advance' && order.deliveryTime && <span className="font-bold" style={{ color: '#d97706' }}> ⏰ {order.deliveryTime}</span>}
+                      {order.customerPhone && ` · ${order.customerPhone}`}
+                    </p>
                   </div>
                   <div className="text-right ml-2">
                     <p className="font-bold text-sm" style={{ color: '#2C1810' }}>{order.total.toFixed(2)} {t('omr')}</p>
