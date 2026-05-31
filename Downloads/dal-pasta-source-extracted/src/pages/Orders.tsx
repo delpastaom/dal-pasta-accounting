@@ -29,6 +29,7 @@ export default function Orders() {
   const [items, setItems] = useState<OrderItem[]>([]);
   const [deliveryTime, setDeliveryTime] = useState('');
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [tablewareFee, setTablewareFee] = useState(0);
   const [deposit, setDeposit] = useState(0);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<'pending' | 'completed' | 'cancelled'>('pending');
@@ -59,7 +60,7 @@ export default function Orders() {
     setCustomerName(''); setCustomerPhone(''); setArea('');
     setOrderDate(new Date().toISOString().split('T')[0]);
     setDeliveryDate(new Date().toISOString().split('T')[0]);
-    setOrderType('regular'); setItems([]); setDeliveryTime(''); setDeliveryFee(0);
+    setOrderType('regular'); setItems([]); setDeliveryTime(''); setDeliveryFee(0); setTablewareFee(0);
     setDeposit(0); setNotes(''); setStatus('pending'); setEditingOrder(null);
   };
 
@@ -74,6 +75,7 @@ export default function Orders() {
     setDeliveryTime(order.deliveryTime || '');
     setItems([...order.items]);
     setDeliveryFee(order.deliveryFee);
+    setTablewareFee(order.tablewareFee || 0);
     setDeposit(order.deposit);
     setNotes(order.notes);
     setStatus(order.status);
@@ -93,7 +95,7 @@ export default function Orders() {
       area: area.trim(), orderDate, deliveryDate,
       deliveryTime: orderType === 'advance' ? (deliveryTime || undefined) : undefined,
       type: orderType,
-      items: [...items], deliveryFee, deposit: orderType === 'advance' ? deposit : 0,
+      items: [...items], deliveryFee, tablewareFee, deposit: orderType === 'advance' ? deposit : 0,
       total, status, notes: notes.trim(),
     };
 
@@ -221,6 +223,7 @@ ${order.area ? `<div class="info">${order.area}</div>` : ''}
 ${itemRows}
 <hr class="solid">
 ${order.deliveryFee > 0 ? `<div class="row"><span>توصيل</span><span>${fmt(order.deliveryFee)} ر.ع</span></div>` : ''}
+${(order.tablewareFee || 0) > 0 ? `<div class="row"><span>🍽️ أواني</span><span>${fmt(order.tablewareFee!)} ر.ع</span></div>` : ''}
 <div class="row-grand"><span>الإجمالي</span><span>${fmt(order.total)} ر.ع</span></div>
 ${order.deposit > 0 ? `
 <div class="row"><span>العربون المدفوع</span><span>- ${fmt(order.deposit)} ر.ع</span></div>
@@ -325,7 +328,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
   };
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const grandTotal = subtotal + deliveryFee;
+  const grandTotal = subtotal + deliveryFee + tablewareFee;
 
   const filteredOrders = useMemo(() => orders.filter(o => {
     const matchStatus = filterStatus === 'all' || o.status === filterStatus;
@@ -500,6 +503,10 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div><Label className="text-xs">{t('deliveryFee')}</Label><Input type="number" step="0.1" min="0" value={deliveryFee} onChange={e => setDeliveryFee(parseFloat(e.target.value) || 0)} className="mt-1" /></div>
+              <div>
+                <Label className="text-xs">🍽️ {t('tablewareFee')}</Label>
+                <Input type="number" step="0.1" min="0" value={tablewareFee} onChange={e => setTablewareFee(parseFloat(e.target.value) || 0)} className="mt-1" />
+              </div>
               {orderType === 'advance' && (
                 <div><Label className="text-xs">{t('depositAmount')}</Label><Input type="number" step="0.1" min="0" value={deposit} onChange={e => setDeposit(parseFloat(e.target.value) || 0)} className="mt-1" /></div>
               )}
@@ -515,6 +522,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
             <div className="p-3 rounded-lg space-y-1" style={{ background: '#F5E6C8' }}>
               <div className="flex justify-between text-sm"><span>{t('subtotal')}</span><span>{subtotal.toFixed(2)} {t('omr')}</span></div>
               <div className="flex justify-between text-sm"><span>{t('deliveryFee')}</span><span>{deliveryFee.toFixed(2)} {t('omr')}</span></div>
+              {tablewareFee > 0 && <div className="flex justify-between text-sm"><span>🍽️ {t('tablewareFee')}</span><span>{tablewareFee.toFixed(2)} {t('omr')}</span></div>}
               {orderType === 'advance' && <div className="flex justify-between text-sm"><span>{t('depositPaid')}</span><span>{deposit.toFixed(2)} {t('omr')}</span></div>}
               <div className="flex justify-between font-bold text-base pt-1 border-t border-amber-300/50">
                 <span>{t('grandTotal')}</span>

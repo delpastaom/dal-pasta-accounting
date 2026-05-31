@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 export default function Reports() {
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
-  const [stats, setStats] = useState({ income: 0, expenses: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0, deliveryFees: 0 });
+  const [stats, setStats] = useState({ income: 0, expenses: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0, deliveryFees: 0, tablewareFees: 0 });
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
@@ -25,6 +25,7 @@ export default function Reports() {
         orders: thisMonth.orders, avgOrder: thisMonth.avgOrder,
         profitMargin: thisMonth.income > 0 ? (profit / thisMonth.income) * 100 : 0,
         deliveryFees: thisMonth.deliveryFees || 0,
+        tablewareFees: thisMonth.tablewareFees || 0,
       });
     } catch (e) {}
     setLoading(false);
@@ -66,21 +67,23 @@ export default function Reports() {
         ))}
       </div>
 
-      {/* Delivery Fees Card */}
-      <Card style={{ border: '1px solid #fbbf24' }}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium" style={{ color: '#8B7355' }}>🚗 رسوم التوصيل — الشهر الحالي</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: '#d97706' }}>{stats.deliveryFees.toFixed(2)} {t('omr')}</p>
-            </div>
-            <div className="text-right text-xs" style={{ color: '#8B7355' }}>
-              <p>من {stats.orders} طلب مكتمل</p>
-              {stats.orders > 0 && <p className="mt-1">معدل/طلب: {(stats.deliveryFees / stats.orders).toFixed(2)} {t('omr')}</p>}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Delivery & Tableware Fees */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card style={{ border: '1px solid #fbbf24' }}>
+          <CardContent className="p-3">
+            <p className="text-xs font-medium" style={{ color: '#8B7355' }}>🚗 رسوم التوصيل</p>
+            <p className="text-xl font-bold mt-1" style={{ color: '#d97706' }}>{stats.deliveryFees.toFixed(2)} {t('omr')}</p>
+            {stats.orders > 0 && <p className="text-[10px] mt-0.5" style={{ color: '#a16207' }}>معدل: {(stats.deliveryFees / stats.orders).toFixed(2)} / طلب</p>}
+          </CardContent>
+        </Card>
+        <Card style={{ border: '1px solid #a78bfa' }}>
+          <CardContent className="p-3">
+            <p className="text-xs font-medium" style={{ color: '#8B7355' }}>🍽️ رسوم الأواني</p>
+            <p className="text-xl font-bold mt-1" style={{ color: '#7c3aed' }}>{stats.tablewareFees.toFixed(2)} {t('omr')}</p>
+            {stats.orders > 0 && <p className="text-[10px] mt-0.5" style={{ color: '#6d28d9' }}>معدل: {(stats.tablewareFees / stats.orders).toFixed(2)} / طلب</p>}
+          </CardContent>
+        </Card>
+      </div>
 
       {expenseRatio > 70 && (
         <div className={`rounded-xl p-4 ${expenseRatio > 80 ? 'animate-pulse-warn' : ''}`} style={{ background: expenseRatio > 80 ? '#fee2e2' : '#fef3c7', border: `1px solid ${expenseRatio > 80 ? '#f87171' : '#fbbf24'}` }}>

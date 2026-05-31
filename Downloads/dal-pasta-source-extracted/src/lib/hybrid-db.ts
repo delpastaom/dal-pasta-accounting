@@ -16,6 +16,7 @@ export interface Order {
   deliveryTime?: string;
   items: OrderItem[];
   deliveryFee: number;
+  tablewareFee?: number;
   deposit: number;
   total: number;
   status: 'pending' | 'completed' | 'cancelled';
@@ -72,6 +73,7 @@ export interface MonthlyData {
   expenses: number;
   orders: number;
   deliveryFees: number;
+  tablewareFees: number;
 }
 
 function rowToOrder(row: any): Order {
@@ -86,6 +88,7 @@ function rowToOrder(row: any): Order {
     deliveryTime: row.delivery_time || undefined,
     items: (row.items || []) as OrderItem[],
     deliveryFee: row.delivery_fee || 0,
+    tablewareFee: row.tableware_fee || 0,
     deposit: row.deposit || 0,
     total: row.total || 0,
     status: row.status || 'pending',
@@ -177,6 +180,7 @@ export const OrderDB = {
           type: order.type,
           items: order.items,
           delivery_fee: order.deliveryFee,
+          tableware_fee: order.tablewareFee || 0,
           deposit: order.deposit,
           total: order.total,
           status: order.status,
@@ -202,6 +206,7 @@ export const OrderDB = {
         if (order.type !== undefined) updateData.type = order.type;
         if (order.items !== undefined) updateData.items = order.items;
         if (order.deliveryFee !== undefined) updateData.delivery_fee = order.deliveryFee;
+        if (order.tablewareFee !== undefined) updateData.tableware_fee = order.tablewareFee;
         if (order.deposit !== undefined) updateData.deposit = order.deposit;
         if (order.total !== undefined) updateData.total = order.total;
         if (order.status !== undefined) updateData.status = order.status;
@@ -486,14 +491,15 @@ export const ReportDB = {
     const months: Record<string, MonthlyData> = {};
     orders.forEach(o => {
       const month = o.deliveryDate.substring(0, 7);
-      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0 };
+      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0, tablewareFees: 0 };
       months[month].income += o.total;
       months[month].orders += 1;
       months[month].deliveryFees += o.deliveryFee || 0;
+      months[month].tablewareFees += o.tablewareFee || 0;
     });
     expenses.forEach(e => {
       const month = e.date.substring(0, 7);
-      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0 };
+      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0, tablewareFees: 0 };
       months[month].expenses += e.amount;
     });
     return Object.values(months).sort((a, b) => a.month.localeCompare(b.month));
@@ -530,7 +536,8 @@ export const ReportDB = {
     const expenses = (await ExpenseDB.getAll()).filter(e => e.date.startsWith(month));
     const income = orders.reduce((s, o) => s + o.total, 0);
     const deliveryFees = orders.reduce((s, o) => s + (o.deliveryFee || 0), 0);
-    return { income, expenses: expenses.reduce((s, e) => s + e.amount, 0), orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0, deliveryFees };
+    const tablewareFees = orders.reduce((s, o) => s + (o.tablewareFee || 0), 0);
+    return { income, expenses: expenses.reduce((s, e) => s + e.amount, 0), orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0, deliveryFees, tablewareFees };
   },
 };
 

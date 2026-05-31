@@ -17,6 +17,7 @@ export interface Order {
   type: 'regular' | 'advance';
   items: OrderItem[];
   deliveryFee: number;
+  tablewareFee?: number;
   deposit: number;
   total: number;
   status: 'pending' | 'completed' | 'cancelled';
