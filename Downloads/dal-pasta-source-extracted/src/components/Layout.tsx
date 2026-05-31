@@ -52,7 +52,7 @@ export default function Layout({ children, onLogout, cloudConnected = false }: L
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 ${lang === 'ar' ? 'right-0' : 'left-0'} w-64 z-50 transform transition-transform duration-300 lg:transform-none ${
+        className={`fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 ${lang === 'ar' ? 'right-0' : 'left-0'} w-64 z-50 transform transition-transform duration-300 lg:transform-none ${
           sidebarOpen
             ? 'translate-x-0'
             : lang === 'ar'
@@ -61,7 +61,7 @@ export default function Layout({ children, onLogout, cloudConnected = false }: L
         }`}
         style={{ background: 'linear-gradient(180deg, #2C1810 0%, #3D2517 100%)' }}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-y-auto">
           {/* Logo */}
           <div className="p-6 flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #E5A53C, #D4932A)' }}>
