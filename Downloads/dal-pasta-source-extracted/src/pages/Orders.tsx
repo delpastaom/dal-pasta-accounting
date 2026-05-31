@@ -88,7 +88,7 @@ export default function Orders() {
       return;
     }
     const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-    const total = subtotal + deliveryFee;
+    const total = subtotal + deliveryFee + (tablewareFee || 0);
 
     const orderData = {
       customerName: customerName.trim(), customerPhone: customerPhone.trim(),
@@ -133,8 +133,9 @@ export default function Orders() {
 
       await loadData();
       if (andNew) { resetForm(); } else { resetForm(); setShowForm(false); }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}\n\nتأكد من تشغيل migrations قاعدة البيانات.`);
     }
   };
 

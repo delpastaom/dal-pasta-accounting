@@ -186,7 +186,8 @@ export const OrderDB = {
           status: order.status,
           notes: order.notes,
         }).select().single();
-        if (!error && data) return rowToOrder(data);
+        if (error) throw new Error(`DB Error: ${error.message}`);
+        if (data) return rowToOrder(data);
       }
     }
     return localDB.OrderDB.add(order);
