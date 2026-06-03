@@ -71,6 +71,7 @@ export interface MonthlyData {
   month: string;
   income: number;
   expenses: number;
+  purchasesTotal: number;
   orders: number;
   deliveryFees: number;
   tablewareFees: number;
@@ -487,12 +488,15 @@ export const PurchaseDB = {
 // ==================== REPORTS ====================
 export const ReportDB = {
   async getMonthlyData(): Promise<MonthlyData[]> {
-    const orders = (await OrderDB.getAll()).filter(o => o.status === 'completed');
-    const expenses = await ExpenseDB.getAll();
+    const [orders, expenses, purchases] = await Promise.all([
+      OrderDB.getAll(), ExpenseDB.getAll(), PurchaseDB.getAll(),
+    ]);
+    const completedOrders = orders.filter(o => o.status === 'completed');
     const months: Record<string, MonthlyData> = {};
-    orders.forEach(o => {
+    const init = (): MonthlyData => ({ month: '', income: 0, expenses: 0, purchasesTotal: 0, orders: 0, deliveryFees: 0, tablewareFees: 0 });
+    completedOrders.forEach(o => {
       const month = o.deliveryDate.substring(0, 7);
-      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0, tablewareFees: 0 };
+      if (!months[month]) { months[month] = init(); months[month].month = month; }
       months[month].income += o.total;
       months[month].orders += 1;
       months[month].deliveryFees += o.deliveryFee || 0;
@@ -500,8 +504,14 @@ export const ReportDB = {
     });
     expenses.forEach(e => {
       const month = e.date.substring(0, 7);
-      if (!months[month]) months[month] = { month, income: 0, expenses: 0, orders: 0, deliveryFees: 0, tablewareFees: 0 };
+      if (!months[month]) { months[month] = init(); months[month].month = month; }
       months[month].expenses += e.amount;
+    });
+    purchases.forEach(p => {
+      const month = p.date.substring(0, 7);
+      if (!months[month]) { months[month] = init(); months[month].month = month; }
+      months[month].purchasesTotal += p.total;
+      months[month].expenses += p.total;
     });
     return Object.values(months).sort((a, b) => a.month.localeCompare(b.month));
   },
@@ -533,12 +543,23 @@ export const ReportDB = {
   async getThisMonthStats(month?: string) {
     const now = new Date();
     const targetMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const orders = (await OrderDB.getAll()).filter(o => o.deliveryDate.startsWith(targetMonth) && o.status === 'completed');
-    const expenses = (await ExpenseDB.getAll()).filter(e => e.date.startsWith(targetMonth));
+    const [allOrders, allExpenses, allPurchases] = await Promise.all([
+      OrderDB.getAll(), ExpenseDB.getAll(), PurchaseDB.getAll(),
+    ]);
+    const orders = allOrders.filter(o => o.deliveryDate.startsWith(targetMonth) && o.status === 'completed');
+    const expenses = allExpenses.filter(e => e.date.startsWith(targetMonth));
+    const purchases = allPurchases.filter(p => p.date.startsWith(targetMonth));
     const income = orders.reduce((s, o) => s + o.total, 0);
     const deliveryFees = orders.reduce((s, o) => s + (o.deliveryFee || 0), 0);
     const tablewareFees = orders.reduce((s, o) => s + (o.tablewareFee || 0), 0);
-    return { income, expenses: expenses.reduce((s, e) => s + e.amount, 0), orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0, deliveryFees, tablewareFees };
+    const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
+    const purchasesTotal = purchases.reduce((s, p) => s + p.total, 0);
+    return {
+      income, orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0,
+      deliveryFees, tablewareFees,
+      expensesTotal, purchasesTotal,
+      expenses: expensesTotal + purchasesTotal,
+    };
   },
 
   async getTopCustomers(month: string) {

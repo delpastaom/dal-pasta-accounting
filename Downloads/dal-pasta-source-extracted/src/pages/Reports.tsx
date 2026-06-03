@@ -19,7 +19,7 @@ export default function Reports() {
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [stats, setStats] = useState({ income: 0, expenses: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0, deliveryFees: 0, tablewareFees: 0 });
+  const [stats, setStats] = useState({ income: 0, expenses: 0, expensesTotal: 0, purchasesTotal: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0, deliveryFees: 0, tablewareFees: 0 });
   const [categoryBreakdown, setCategoryBreakdown] = useState<{ category: string; amount: number; percentage: number }[]>([]);
   const [topDishes, setTopDishes] = useState<{ name: string; count: number; revenue: number }[]>([]);
   const [dailyBreakdown, setDailyBreakdown] = useState<{ date: string; orders: number; income: number }[]>([]);
@@ -56,7 +56,10 @@ export default function Reports() {
     ]).then(([monthStats, catBreakdown, daily, customers, dishes]) => {
       const profit = monthStats.income - monthStats.expenses;
       setStats({
-        income: monthStats.income, expenses: monthStats.expenses, profit,
+        income: monthStats.income, expenses: monthStats.expenses,
+        expensesTotal: monthStats.expensesTotal || 0,
+        purchasesTotal: monthStats.purchasesTotal || 0,
+        profit,
         orders: monthStats.orders, avgOrder: monthStats.avgOrder,
         profitMargin: monthStats.income > 0 ? (profit / monthStats.income) * 100 : 0,
         deliveryFees: monthStats.deliveryFees || 0,
@@ -107,17 +110,28 @@ export default function Reports() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4">
-        {[
-          { label: t('income'), value: `${stats.income.toFixed(2)} ${t('omr')}`, color: '#16a34a', bg: '#dcfce7' },
-          { label: t('expenses'), value: `${stats.expenses.toFixed(2)} ${t('omr')}`, color: '#dc2626', bg: '#fee2e2' },
-          { label: t('profit'), value: `${stats.profit.toFixed(2)} ${t('omr')}`, color: stats.profit >= 0 ? '#16a34a' : '#dc2626', bg: stats.profit >= 0 ? '#dcfce7' : '#fee2e2' },
-          { label: t('avgOrder'), value: `${stats.avgOrder.toFixed(2)} ${t('omr')}`, color: '#2563eb', bg: '#dbeafe' },
-        ].map(card => (
-          <Card key={card.label}><CardContent className="p-4">
-            <p className="text-xs font-medium" style={{ color: '#8B7355' }}>{card.label}</p>
-            <p className="text-lg font-bold mt-1" style={{ color: card.color }}>{card.value}</p>
-          </CardContent></Card>
-        ))}
+        <Card><CardContent className="p-4">
+          <p className="text-xs font-medium" style={{ color: '#8B7355' }}>{t('income')}</p>
+          <p className="text-lg font-bold mt-1" style={{ color: '#16a34a' }}>{stats.income.toFixed(2)} {t('omr')}</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-4">
+          <p className="text-xs font-medium" style={{ color: '#8B7355' }}>{t('expenses')}</p>
+          <p className="text-lg font-bold mt-1" style={{ color: '#dc2626' }}>{stats.expenses.toFixed(2)} {t('omr')}</p>
+          {stats.purchasesTotal > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              <p className="text-[10px]" style={{ color: '#8B7355' }}>🧾 تشغيلية: {stats.expensesTotal.toFixed(2)}</p>
+              <p className="text-[10px]" style={{ color: '#8B7355' }}>📦 مشتريات: {stats.purchasesTotal.toFixed(2)}</p>
+            </div>
+          )}
+        </CardContent></Card>
+        <Card><CardContent className="p-4">
+          <p className="text-xs font-medium" style={{ color: '#8B7355' }}>{t('profit')}</p>
+          <p className="text-lg font-bold mt-1" style={{ color: stats.profit >= 0 ? '#16a34a' : '#dc2626' }}>{stats.profit.toFixed(2)} {t('omr')}</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-4">
+          <p className="text-xs font-medium" style={{ color: '#8B7355' }}>{t('avgOrder')}</p>
+          <p className="text-lg font-bold mt-1" style={{ color: '#2563eb' }}>{stats.avgOrder.toFixed(2)} {t('omr')}</p>
+        </CardContent></Card>
       </div>
 
       {expenseRatio > 70 && (
