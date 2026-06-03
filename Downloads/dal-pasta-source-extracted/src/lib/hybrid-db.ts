@@ -530,15 +530,29 @@ export const ReportDB = {
     return Object.entries(dishes).map(([name, data]) => ({ name, ...data })).sort((a, b) => b.count - a.count).slice(0, 10);
   },
 
-  async getThisMonthStats() {
+  async getThisMonthStats(month?: string) {
     const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const orders = (await OrderDB.getAll()).filter(o => o.deliveryDate.startsWith(month) && o.status === 'completed');
-    const expenses = (await ExpenseDB.getAll()).filter(e => e.date.startsWith(month));
+    const targetMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const orders = (await OrderDB.getAll()).filter(o => o.deliveryDate.startsWith(targetMonth) && o.status === 'completed');
+    const expenses = (await ExpenseDB.getAll()).filter(e => e.date.startsWith(targetMonth));
     const income = orders.reduce((s, o) => s + o.total, 0);
     const deliveryFees = orders.reduce((s, o) => s + (o.deliveryFee || 0), 0);
     const tablewareFees = orders.reduce((s, o) => s + (o.tablewareFee || 0), 0);
     return { income, expenses: expenses.reduce((s, e) => s + e.amount, 0), orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0, deliveryFees, tablewareFees };
+  },
+
+  async getDailyBreakdown(month: string) {
+    const orders = (await OrderDB.getAll()).filter(o =>
+      o.deliveryDate.startsWith(month) && o.status === 'completed'
+    );
+    const days: Record<string, { date: string; orders: number; income: number }> = {};
+    orders.forEach(o => {
+      const date = o.deliveryDate;
+      if (!days[date]) days[date] = { date, orders: 0, income: 0 };
+      days[date].orders += 1;
+      days[date].income += o.total;
+    });
+    return Object.values(days).sort((a, b) => a.date.localeCompare(b.date));
   },
 };
 
