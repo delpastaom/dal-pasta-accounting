@@ -44,33 +44,38 @@ export default function Reports() {
     loadBase();
   }, []);
 
-  // تحميل بيانات الشهر المختار
+  // تحميل بيانات الشهر المختار — مستقل عن loading
   useEffect(() => {
-    if (loading) return;
-    Promise.all([
-      ReportDB.getThisMonthStats(selectedMonth),
-      ReportDB.getCategoryBreakdown(selectedMonth),
-      ReportDB.getDailyBreakdown(selectedMonth),
-      ReportDB.getTopCustomers(selectedMonth),
-      ReportDB.getTopDishes(),
-    ]).then(([monthStats, catBreakdown, daily, customers, dishes]) => {
-      const profit = monthStats.income - monthStats.expenses;
-      setStats({
-        income: monthStats.income, expenses: monthStats.expenses,
-        expensesTotal: monthStats.expensesTotal || 0,
-        purchasesTotal: monthStats.purchasesTotal || 0,
-        profit,
-        orders: monthStats.orders, avgOrder: monthStats.avgOrder,
-        profitMargin: monthStats.income > 0 ? (profit / monthStats.income) * 100 : 0,
-        deliveryFees: monthStats.deliveryFees || 0,
-        tablewareFees: monthStats.tablewareFees || 0,
-      });
-      setCategoryBreakdown(catBreakdown);
-      setDailyBreakdown(daily);
-      setTopCustomers(customers);
-      setTopDishes(dishes);
-    });
-  }, [loading, selectedMonth]);
+    const loadMonthStats = async () => {
+      try {
+        const [monthStats, catBreakdown, daily, customers, dishes] = await Promise.all([
+          ReportDB.getThisMonthStats(selectedMonth),
+          ReportDB.getCategoryBreakdown(selectedMonth),
+          ReportDB.getDailyBreakdown(selectedMonth),
+          ReportDB.getTopCustomers(selectedMonth),
+          ReportDB.getTopDishes(),
+        ]);
+        const profit = monthStats.income - monthStats.expenses;
+        setStats({
+          income: monthStats.income, expenses: monthStats.expenses,
+          expensesTotal: monthStats.expensesTotal || 0,
+          purchasesTotal: monthStats.purchasesTotal || 0,
+          profit,
+          orders: monthStats.orders, avgOrder: monthStats.avgOrder,
+          profitMargin: monthStats.income > 0 ? (profit / monthStats.income) * 100 : 0,
+          deliveryFees: monthStats.deliveryFees || 0,
+          tablewareFees: monthStats.tablewareFees || 0,
+        });
+        setCategoryBreakdown(catBreakdown);
+        setDailyBreakdown(daily);
+        setTopCustomers(customers);
+        setTopDishes(dishes);
+      } catch (e) {
+        console.error('Reports stats error:', e);
+      }
+    };
+    loadMonthStats();
+  }, [selectedMonth]);
 
   const expenseRatio = stats.income > 0 ? (stats.expenses / stats.income) * 100 : 0;
   const maxVal = Math.max(...monthlyData.map((d: MonthlyData) => Math.max(d.income, d.expenses)), 1);
