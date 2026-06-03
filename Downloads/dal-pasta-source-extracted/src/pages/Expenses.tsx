@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { t } from '@/lib/i18n';
-import { ExpenseDB, ReceiptDB, type Expense } from '@/lib/hybrid-db';
+import { ExpenseDB, ReceiptDB, SettingsDB, type Expense } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ export default function Expenses() {
 
   const [category, setCategory] = useState('operational');
   const [amount, setAmount] = useState('');
+  const [expCurrency, setExpCurrency] = useState<'OMR' | 'AED'>('OMR');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -34,7 +35,8 @@ export default function Expenses() {
   };
 
   const resetForm = () => {
-    setCategory('operational'); setAmount(''); setDate(new Date().toISOString().split('T')[0]);
+    setCategory('operational'); setAmount(''); setExpCurrency('OMR');
+    setDate(new Date().toISOString().split('T')[0]);
     setDescription(''); setReceipt(null); setEditingExpense(null);
   };
 
@@ -45,9 +47,14 @@ export default function Expenses() {
 
   const handleSave = async (andNew = false) => {
     if (!category || !amount || !date) { alert(t('fillRequired')); return; }
-    const expenseData = { category, amount: parseFloat(amount), date, description: description.trim(), receipt };
+    const aedRate = SettingsDB.get().aedRate || 0.105;
+    const rawAmount = parseFloat(amount);
+    const finalAmount = expCurrency === 'AED' ? rawAmount * aedRate : rawAmount;
+    const aedNote = expCurrency === 'AED' ? `${rawAmount} د.إ - ` : '';
+    const finalDescription = `${aedNote}${description.trim()}`;
+    const expenseData = { category, amount: finalAmount, date, description: finalDescription, receipt };
     try {
-      if (editingExpense) { await ExpenseDB.update(editingExpense.id, expenseData); } 
+      if (editingExpense) { await ExpenseDB.update(editingExpense.id, expenseData); }
       else { await ExpenseDB.add(expenseData); }
       await loadExpenses();
       if (andNew) { resetForm(); } else { resetForm(); setShowForm(false); }
@@ -95,7 +102,21 @@ export default function Expenses() {
                   {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{t(cat as any)}</option>)}
                 </select>
               </div>
-              <div><Label className="text-xs">{t('amount')} *</Label><Input type="number" step="0.1" min="0" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1" /></div>
+              <div>
+                <Label className="text-xs">{t('amount')} *</Label>
+                <div className="flex gap-1 mt-1">
+                  <Input type="number" step="0.1" min="0" value={amount} onChange={e => setAmount(e.target.value)} className="flex-1" />
+                  <div className="flex rounded-lg border border-input overflow-hidden text-xs font-medium">
+                    <button type="button" onClick={() => setExpCurrency('OMR')} className="px-2 py-1 transition-colors" style={expCurrency === 'OMR' ? { background: '#E5A53C', color: '#fff' } : { color: '#8B7355' }}>ر.ع</button>
+                    <button type="button" onClick={() => setExpCurrency('AED')} className="px-2 py-1 transition-colors" style={expCurrency === 'AED' ? { background: '#3ECF8E', color: '#fff' } : { color: '#8B7355' }}>د.إ</button>
+                  </div>
+                </div>
+                {expCurrency === 'AED' && amount && parseFloat(amount) > 0 && (
+                  <p className="text-xs mt-1" style={{ color: '#3ECF8E' }}>
+                    ≈ {(parseFloat(amount) * (SettingsDB.get().aedRate || 0.105)).toFixed(3)} ر.ع
+                  </p>
+                )}
+              </div>
             </div>
             <div><Label className="text-xs">{t('date')} *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1" /></div>
             <div><Label className="text-xs">{t('description')}</Label><Input value={description} onChange={e => setDescription(e.target.value)} className="mt-1" /></div>

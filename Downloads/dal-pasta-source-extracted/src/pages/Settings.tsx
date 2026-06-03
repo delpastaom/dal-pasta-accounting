@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 export default function Settings() {
   const [lang, setLangState] = useState<Lang>(getLang());
+  const [aedRate, setAedRate] = useState(String(SettingsDB.get().aedRate || 0.105));
+  const [aedSaved, setAedSaved] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -90,6 +92,41 @@ export default function Settings() {
               </p>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* AED Exchange Rate */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-base">🇦🇪 سعر صرف الدرهم الإماراتي</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs" style={{ color: '#8B7355' }}>
+            1 درهم إماراتي = ؟ ريال عماني
+          </p>
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <Label className="text-xs">1 AED = __ ر.ع</Label>
+              <Input
+                type="number" step="0.001" min="0.01" max="1"
+                value={aedRate}
+                onChange={e => setAedRate(e.target.value)}
+                className="mt-1 text-lg font-bold text-center"
+                dir="ltr"
+              />
+            </div>
+            <div className="pt-5 text-center px-2">
+              <p className="text-xs" style={{ color: '#8B7355' }}>أو</p>
+              <p className="text-xs font-bold mt-1">1 ر.ع = {parseFloat(aedRate) > 0 ? (1 / parseFloat(aedRate)).toFixed(2) : '---'} د.إ</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => { SettingsDB.set({ aedRate: parseFloat(aedRate) || 0.105 }); setAedSaved(true); setTimeout(() => setAedSaved(false), 2000); }}
+            className="w-full" style={{ background: '#E5A53C' }}
+          >
+            {aedSaved ? '✅ تم الحفظ' : 'حفظ السعر'}
+          </Button>
+          <p className="text-[10px] text-center" style={{ color: '#A08B6D' }}>
+            السعر الحالي تقريباً: 1 AED = 0.105 ر.ع (1 ر.ع ≈ 9.52 د.إ)
+          </p>
         </CardContent>
       </Card>
 

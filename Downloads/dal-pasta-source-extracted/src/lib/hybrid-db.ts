@@ -573,10 +573,10 @@ export const ReportDB = {
 // ==================== SETTINGS ====================
 export const SettingsDB = {
   get() {
-    const defaults = { pin: '1234', currency: 'OMR', lang: 'ar' as const };
+    const defaults = { pin: '1234', currency: 'OMR', lang: 'ar' as const, aedRate: 0.105 };
     try { const data = localStorage.getItem('dp_settings'); return data ? { ...defaults, ...JSON.parse(data) } : defaults; } catch { return defaults; }
   },
-  set(settings: Partial<{ pin: string; currency: string; lang: 'ar' | 'en' }>) {
+  set(settings: Partial<{ pin: string; currency: string; lang: 'ar' | 'en'; aedRate: number }>) {
     localStorage.setItem('dp_settings', JSON.stringify({ ...this.get(), ...settings }));
   },
   verifyPin(pin: string): boolean { return this.get().pin === pin; },
