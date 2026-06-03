@@ -23,6 +23,7 @@ export default function Reports() {
   const [categoryBreakdown, setCategoryBreakdown] = useState<{ category: string; amount: number; percentage: number }[]>([]);
   const [topDishes, setTopDishes] = useState<{ name: string; count: number; revenue: number }[]>([]);
   const [dailyBreakdown, setDailyBreakdown] = useState<{ date: string; orders: number; income: number }[]>([]);
+  const [topCustomers, setTopCustomers] = useState<{ name: string; orders: number; revenue: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // تحميل البيانات الأولية (المخطط الشهري فقط)
@@ -50,8 +51,9 @@ export default function Reports() {
       ReportDB.getThisMonthStats(selectedMonth),
       ReportDB.getCategoryBreakdown(selectedMonth),
       ReportDB.getDailyBreakdown(selectedMonth),
+      ReportDB.getTopCustomers(selectedMonth),
       ReportDB.getTopDishes(),
-    ]).then(([monthStats, catBreakdown, daily, dishes]) => {
+    ]).then(([monthStats, catBreakdown, daily, customers, dishes]) => {
       const profit = monthStats.income - monthStats.expenses;
       setStats({
         income: monthStats.income, expenses: monthStats.expenses, profit,
@@ -62,6 +64,7 @@ export default function Reports() {
       });
       setCategoryBreakdown(catBreakdown);
       setDailyBreakdown(daily);
+      setTopCustomers(customers);
       setTopDishes(dishes);
     });
   }, [loading, selectedMonth]);
@@ -276,6 +279,40 @@ export default function Reports() {
                   <div className="h-2.5 rounded-full overflow-hidden" style={{ background: '#F5E6C8' }}><div className="h-full rounded-full transition-all" style={{ width: `${cat.percentage}%`, background: 'linear-gradient(90deg, #E5A53C, #D4932A)' }} /></div>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Top Customers */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">👑 أكثر الزبائن طلباً</CardTitle></CardHeader>
+        <CardContent>
+          {topCustomers.length === 0 ? (
+            <p className="text-center text-sm py-4" style={{ color: '#8B7355' }}>لا توجد بيانات</p>
+          ) : (
+            <div className="space-y-3">
+              {topCustomers.map((c, idx) => {
+                const maxRev = topCustomers[0].revenue;
+                const pct = (c.revenue / maxRev) * 100;
+                const medals = ['🥇', '🥈', '🥉'];
+                return (
+                  <div key={c.name}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium flex items-center gap-1">
+                        <span>{medals[idx] || `${idx + 1}.`}</span>
+                        <span>{c.name}</span>
+                      </span>
+                      <span className="text-xs" style={{ color: '#8B7355' }}>
+                        {c.orders} طلب · <span className="font-bold" style={{ color: '#E5A53C' }}>{c.revenue.toFixed(2)} ر.ع</span>
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: '#F5E6C8' }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: idx === 0 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 'linear-gradient(90deg, #E5A53C, #D4932A)' }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

@@ -541,6 +541,20 @@ export const ReportDB = {
     return { income, expenses: expenses.reduce((s, e) => s + e.amount, 0), orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0, deliveryFees, tablewareFees };
   },
 
+  async getTopCustomers(month: string) {
+    const orders = (await OrderDB.getAll()).filter(o =>
+      o.deliveryDate.startsWith(month) && o.status === 'completed'
+    );
+    const customers: Record<string, { name: string; orders: number; revenue: number }> = {};
+    orders.forEach(o => {
+      const key = o.customerName?.trim() || 'غير معروف';
+      if (!customers[key]) customers[key] = { name: key, orders: 0, revenue: 0 };
+      customers[key].orders += 1;
+      customers[key].revenue += o.total;
+    });
+    return Object.values(customers).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+  },
+
   async getDailyBreakdown(month: string) {
     const orders = (await OrderDB.getAll()).filter(o =>
       o.deliveryDate.startsWith(month) && o.status === 'completed'
