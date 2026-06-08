@@ -43,6 +43,7 @@ export interface Purchase {
   total: number;
   supplier: string;
   date: string;
+  category: string;
   receipt: string | null;
   createdAt: string;
 }
@@ -144,6 +145,7 @@ function rowToPurchase(row: any): Purchase {
     total: row.total || 0,
     supplier: row.supplier || '',
     date: row.date || '',
+    category: row.category || 'other',
     receipt: row.receipt_url || null,
     createdAt: row.created_at || new Date().toISOString(),
   };
@@ -433,7 +435,7 @@ export const PurchaseDB = {
         const { data, error } = await sb.from('purchases').insert({
           product_name: purchase.productName, quantity: purchase.quantity, unit: purchase.unit,
           unit_price: purchase.unitPrice, total: purchase.total, supplier: purchase.supplier,
-          date: purchase.date, receipt_url: purchase.receipt,
+          date: purchase.date, category: purchase.category || 'other', receipt_url: purchase.receipt,
         }).select().single();
         if (!error && data) {
           const row = rowToPurchase(data);
@@ -464,6 +466,7 @@ export const PurchaseDB = {
         if (purchase.supplier !== undefined) updateData.supplier = purchase.supplier;
         if (purchase.date !== undefined) updateData.date = purchase.date;
         if (purchase.receipt !== undefined) updateData.receipt_url = purchase.receipt;
+        if (purchase.category !== undefined) updateData.category = purchase.category;
         const { error } = await sb.from('purchases').update(updateData).eq('id', id);
         if (!error) { const all = await this.getAll(); return all.find(p => p.id === id) || null; }
       }
@@ -517,11 +520,13 @@ export const ReportDB = {
   },
 
   async getCategoryBreakdown(month?: string) {
-    const expenses = await ExpenseDB.getAll();
-    const filtered = month ? expenses.filter(e => e.date.startsWith(month)) : expenses;
+    const [expenses, purchases] = await Promise.all([ExpenseDB.getAll(), PurchaseDB.getAll()]);
+    const filteredExp = month ? expenses.filter(e => e.date.startsWith(month)) : expenses;
+    const filteredPur = month ? purchases.filter(p => p.date.startsWith(month)) : purchases;
     const categories: Record<string, number> = {};
     let total = 0;
-    filtered.forEach(e => { categories[e.category] = (categories[e.category] || 0) + e.amount; total += e.amount; });
+    filteredExp.forEach(e => { categories[e.category] = (categories[e.category] || 0) + e.amount; total += e.amount; });
+    filteredPur.forEach(p => { const cat = p.category || 'other'; categories[cat] = (categories[cat] || 0) + p.total; total += p.total; });
     return Object.entries(categories).map(([category, amount]) => ({
       category, amount, percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
     })).sort((a, b) => b.amount - a.amount);

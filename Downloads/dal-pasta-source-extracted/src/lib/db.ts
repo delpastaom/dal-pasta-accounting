@@ -44,6 +44,7 @@ export interface Purchase {
   total: number;
   supplier: string;
   date: string;
+  category: string;
   receipt: string | null;
   createdAt: string;
 }

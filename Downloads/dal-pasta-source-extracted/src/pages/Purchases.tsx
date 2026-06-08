@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const UNITS = ['kg', 'gram', 'liter', 'piece', 'box', 'pack', 'bottle', 'jar'];
+const PURCHASE_CATEGORIES = ['groceries','packaging','operational','maintenance','electricity','water','gas','fuel','salary','courier','advertising','other'];
 
 export default function Purchases() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -22,6 +23,7 @@ export default function Purchases() {
   const [unit, setUnit] = useState('kg');
   const [unitPrice, setUnitPrice] = useState('');
   const [purchCurrency, setPurchCurrency] = useState<'OMR' | 'AED'>('OMR');
+  const [category, setCategory] = useState('groceries');
   const [supplier, setSupplier] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -34,13 +36,13 @@ export default function Purchases() {
 
   const resetForm = () => {
     setProductName(''); setQuantity(''); setUnit('kg'); setUnitPrice(''); setPurchCurrency('OMR');
-    setSupplier(''); setDate(new Date().toISOString().split('T')[0]); setReceipt(null); setEditingPurchase(null);
+    setCategory('groceries'); setSupplier(''); setDate(new Date().toISOString().split('T')[0]); setReceipt(null); setEditingPurchase(null);
   };
 
   const handleEdit = (purchase: Purchase) => {
     setEditingPurchase(purchase); setProductName(purchase.productName); setQuantity(purchase.quantity.toString());
     setUnit(purchase.unit); setUnitPrice(purchase.unitPrice.toString()); setSupplier(purchase.supplier);
-    setDate(purchase.date); setReceipt(purchase.receipt); setShowForm(true);
+    setCategory(purchase.category || 'other'); setDate(purchase.date); setReceipt(purchase.receipt); setShowForm(true);
   };
 
   const handleSave = async (andNew = false) => {
@@ -49,7 +51,7 @@ export default function Purchases() {
     const qty = parseFloat(quantity);
     const rawPrice = parseFloat(unitPrice);
     const price = purchCurrency === 'AED' ? rawPrice * aedRate : rawPrice;
-    const purchaseData = { productName: productName.trim(), quantity: qty, unit, unitPrice: price, total: qty * price, supplier: supplier.trim(), date, receipt };
+    const purchaseData = { productName: productName.trim(), quantity: qty, unit, unitPrice: price, total: qty * price, supplier: supplier.trim(), date, category, receipt };
     try {
       if (editingPurchase) { await PurchaseDB.update(editingPurchase.id, purchaseData); } else { await PurchaseDB.add(purchaseData); }
       await loadPurchases();
@@ -134,7 +136,14 @@ export default function Purchases() {
         <Card className="animate-fadeIn">
           <CardHeader><CardTitle className="text-base">{editingPurchase ? t('editPurchase') : t('newPurchase')}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div><Label className="text-xs">{t('productName')} *</Label><Input value={productName} onChange={e => setProductName(e.target.value)} className="mt-1" /></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><Label className="text-xs">{t('productName')} *</Label><Input value={productName} onChange={e => setProductName(e.target.value)} className="mt-1" /></div>
+              <div><Label className="text-xs">{t('category')}</Label>
+                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full mt-1 text-sm rounded-lg border border-input px-3 py-2 bg-background">
+                  {PURCHASE_CATEGORIES.map(cat => <option key={cat} value={cat}>{t(cat as any)}</option>)}
+                </select>
+              </div>
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <div><Label className="text-xs">{t('quantity')} *</Label><Input type="number" step="0.01" min="0" value={quantity} onChange={e => setQuantity(e.target.value)} className="mt-1" /></div>
               <div><Label className="text-xs">{t('unit')}</Label>
@@ -192,6 +201,7 @@ export default function Purchases() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-sm">{purchase.productName}</p>
+                      {purchase.category && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#F5E6C8', color: '#8B6914' }}>{t(purchase.category as any)}</span>}
                       {purchase.receipt && <button onClick={() => viewReceipt(purchase.receipt)} className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">📎 {t('receipt')}</button>}
                     </div>
                     <p className="text-xs mt-1" style={{ color: '#8B7355' }}>{purchase.quantity} {t(purchase.unit as any)} × {purchase.unitPrice.toFixed(2)} {t('omr')}</p>
