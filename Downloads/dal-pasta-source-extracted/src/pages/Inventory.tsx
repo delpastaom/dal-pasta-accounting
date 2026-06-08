@@ -42,7 +42,7 @@ export default function Inventory() {
       const [prods, dshs] = await Promise.all([ProductDB.getAll(), DishDB.getAll()]);
       setProducts(prods); setDishes(dshs);
       setLowStockAlert(prods.filter(p => p.currentStock <= p.reorderLevel));
-    } catch (e) {}
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -52,19 +52,19 @@ export default function Inventory() {
   const handleSaveProduct = async () => {
     if (!productName.trim()) { alert(t('fillRequired')); return; }
     const data = { name: productName.trim(), unit: productUnit, currentStock: parseFloat(currentStock) || 0, reorderLevel: parseFloat(reorderLevel) || 5, avgUnitPrice: parseFloat(avgUnitPrice) || 0, supplier: productSupplier.trim() };
-    try { if (editingProduct) { await ProductDB.update(editingProduct.id, data); } else { await ProductDB.add(data); } resetProductForm(); setShowProductForm(false); await loadData(); } catch (e) {}
+    try { if (editingProduct) { await ProductDB.update(editingProduct.id, data); } else { await ProductDB.add(data); } resetProductForm(); setShowProductForm(false); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleSaveDish = async () => {
     if (!dishName.trim() || !dishPrice) { alert(t('fillRequired')); return; }
     const data = { name: dishName.trim(), price: parseFloat(dishPrice) || 0, cost: parseFloat(dishCost) || 0 };
-    try { if (editingDish) { await DishDB.update(editingDish.id, data); } else { await DishDB.add(data); } resetDishForm(); setShowDishForm(false); await loadData(); } catch (e) {}
+    try { if (editingDish) { await DishDB.update(editingDish.id, data); } else { await DishDB.add(data); } resetDishForm(); setShowDishForm(false); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleEditProduct = (product: Product) => { setEditingProduct(product); setProductName(product.name); setProductUnit(product.unit); setCurrentStock(product.currentStock.toString()); setReorderLevel(product.reorderLevel.toString()); setAvgUnitPrice(product.avgUnitPrice.toString()); setProductSupplier(product.supplier); setShowProductForm(true); };
   const handleEditDish = (dish: Dish) => { setEditingDish(dish); setDishName(dish.name); setDishPrice(dish.price.toString()); setDishCost(dish.cost.toString()); setShowDishForm(true); };
-  const handleDeleteProduct = async (id: string) => { try { await ProductDB.delete(id); setDeleteProductDialog(null); await loadData(); } catch (e) {} };
-  const handleDeleteDish = async (id: string) => { try { await DishDB.delete(id); setDeleteDishDialog(null); await loadData(); } catch (e) {} };
+  const handleDeleteProduct = async (id: string) => { try { await ProductDB.delete(id); setDeleteProductDialog(null); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); } };
+  const handleDeleteDish = async (id: string) => { try { await DishDB.delete(id); setDeleteDishDialog(null); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); } };
 
   if (loading && products.length === 0 && dishes.length === 0) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#E5A53C', borderTopColor: 'transparent' }} /></div>;

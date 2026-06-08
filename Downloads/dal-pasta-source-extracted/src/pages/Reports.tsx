@@ -38,7 +38,7 @@ export default function Reports() {
           const last = data[data.length - 1].month;
           setSelectedMonth(last);
         }
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       setLoading(false);
     };
     loadBase();

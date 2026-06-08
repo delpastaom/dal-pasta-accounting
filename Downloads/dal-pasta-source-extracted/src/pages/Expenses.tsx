@@ -30,7 +30,7 @@ export default function Expenses() {
 
   const loadExpenses = async () => {
     setLoading(true);
-    try { setExpenses(await ExpenseDB.getAll()); } catch (e) {}
+    try { setExpenses(await ExpenseDB.getAll()); } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -58,13 +58,13 @@ export default function Expenses() {
       else { await ExpenseDB.add(expenseData); }
       await loadExpenses();
       if (andNew) { resetForm(); } else { resetForm(); setShowForm(false); }
-    } catch (e) {}
+    } catch (e: any) { alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleDelete = async (id: string) => {
     const expense = await ExpenseDB.getById(id);
     if (expense?.receipt) ReceiptDB.delete(expense.receipt);
-    try { await ExpenseDB.delete(id); setDeleteDialog(null); await loadExpenses(); } catch (e) {}
+    try { await ExpenseDB.delete(id); setDeleteDialog(null); await loadExpenses(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

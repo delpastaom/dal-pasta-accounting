@@ -32,7 +32,7 @@ export default function Purchases() {
 
   useEffect(() => { loadPurchases(); }, []);
 
-  const loadPurchases = async () => { setLoading(true); try { setPurchases(await PurchaseDB.getAll()); } catch (e) {} setLoading(false); };
+  const loadPurchases = async () => { setLoading(true); try { setPurchases(await PurchaseDB.getAll()); } catch (e) { console.error(e); } setLoading(false); };
 
   const resetForm = () => {
     setProductName(''); setQuantity(''); setUnit('kg'); setUnitPrice(''); setPurchCurrency('OMR');
@@ -65,7 +65,7 @@ export default function Purchases() {
   const handleDelete = async (id: string) => {
     const purchase = await PurchaseDB.getById(id);
     if (purchase?.receipt) ReceiptDB.delete(purchase.receipt);
-    try { await PurchaseDB.delete(id); setDeleteDialog(null); await loadPurchases(); } catch (e) {}
+    try { await PurchaseDB.delete(id); setDeleteDialog(null); await loadPurchases(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

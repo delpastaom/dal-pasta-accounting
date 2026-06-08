@@ -289,7 +289,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
   };
 
   const handleDelete = async (id: string) => {
-    try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e) {}
+    try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const addDishItem = (dish: { name: string; nameEn?: string; price: number; cost: number }) => {
