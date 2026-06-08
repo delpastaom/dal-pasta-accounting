@@ -56,7 +56,10 @@ export default function Purchases() {
       if (editingPurchase) { await PurchaseDB.update(editingPurchase.id, purchaseData); } else { await PurchaseDB.add(purchaseData); }
       await loadPurchases();
       if (andNew) { resetForm(); } else { resetForm(); setShowForm(false); }
-    } catch (e) {}
+    } catch (e: any) {
+      console.error(e);
+      alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}\n\nتأكدي من تشغيل migration قاعدة البيانات في Supabase.`);
+    }
   };
 
   const handleDelete = async (id: string) => {
