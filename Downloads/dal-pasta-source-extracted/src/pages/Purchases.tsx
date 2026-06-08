@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { t } from '@/lib/i18n';
-import { PurchaseDB, ReceiptDB, type Purchase } from '@/lib/hybrid-db';
+import { PurchaseDB, ReceiptDB, SettingsDB, type Purchase } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ export default function Purchases() {
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('kg');
   const [unitPrice, setUnitPrice] = useState('');
+  const [purchCurrency, setPurchCurrency] = useState<'OMR' | 'AED'>('OMR');
   const [supplier, setSupplier] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export default function Purchases() {
   const loadPurchases = async () => { setLoading(true); try { setPurchases(await PurchaseDB.getAll()); } catch (e) {} setLoading(false); };
 
   const resetForm = () => {
-    setProductName(''); setQuantity(''); setUnit('kg'); setUnitPrice('');
+    setProductName(''); setQuantity(''); setUnit('kg'); setUnitPrice(''); setPurchCurrency('OMR');
     setSupplier(''); setDate(new Date().toISOString().split('T')[0]); setReceipt(null); setEditingPurchase(null);
   };
 
@@ -44,7 +45,10 @@ export default function Purchases() {
 
   const handleSave = async (andNew = false) => {
     if (!productName.trim() || !quantity || !unitPrice) { alert(t('fillRequired')); return; }
-    const qty = parseFloat(quantity); const price = parseFloat(unitPrice);
+    const aedRate = SettingsDB.get().aedRate || 0.105;
+    const qty = parseFloat(quantity);
+    const rawPrice = parseFloat(unitPrice);
+    const price = purchCurrency === 'AED' ? rawPrice * aedRate : rawPrice;
     const purchaseData = { productName: productName.trim(), quantity: qty, unit, unitPrice: price, total: qty * price, supplier: supplier.trim(), date, receipt };
     try {
       if (editingPurchase) { await PurchaseDB.update(editingPurchase.id, purchaseData); } else { await PurchaseDB.add(purchaseData); }
@@ -67,7 +71,10 @@ export default function Purchases() {
   };
 
   const viewReceipt = (receiptId: string | null) => { if (!receiptId) return; const data = ReceiptDB.get(receiptId); if (data) setReceiptPreview(data); };
-  const total = (parseFloat(quantity) || 0) * (parseFloat(unitPrice) || 0);
+  const aedRate = SettingsDB.get().aedRate || 0.105;
+  const rawUnitPrice = parseFloat(unitPrice) || 0;
+  const unitPriceOMR = purchCurrency === 'AED' ? rawUnitPrice * aedRate : rawUnitPrice;
+  const total = (parseFloat(quantity) || 0) * unitPriceOMR;
 
   if (loading && purchases.length === 0) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#E5A53C', borderTopColor: 'transparent' }} /></div>;
@@ -133,7 +140,21 @@ export default function Purchases() {
               <div><Label className="text-xs">{t('unit')}</Label>
                 <select value={unit} onChange={e => setUnit(e.target.value)} className="w-full mt-1 text-sm rounded-lg border border-input px-3 py-2 bg-background">{UNITS.map(u => <option key={u} value={u}>{t(u as any)}</option>)}</select>
               </div>
-              <div><Label className="text-xs">{t('unitPrice')} *</Label><Input type="number" step="0.01" min="0" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} className="mt-1" /></div>
+              <div>
+                <Label className="text-xs">{t('unitPrice')} *</Label>
+                <div className="flex gap-1 mt-1">
+                  <Input type="number" step="0.01" min="0" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} className="flex-1" />
+                  <div className="flex rounded-lg border border-input overflow-hidden text-xs font-medium">
+                    <button type="button" onClick={() => setPurchCurrency('OMR')} className="px-2 py-1 transition-colors" style={purchCurrency === 'OMR' ? { background: '#E5A53C', color: '#fff' } : { color: '#8B7355' }}>ر.ع</button>
+                    <button type="button" onClick={() => setPurchCurrency('AED')} className="px-2 py-1 transition-colors" style={purchCurrency === 'AED' ? { background: '#3ECF8E', color: '#fff' } : { color: '#8B7355' }}>د.إ</button>
+                  </div>
+                </div>
+                {purchCurrency === 'AED' && unitPrice && parseFloat(unitPrice) > 0 && (
+                  <p className="text-xs mt-1" style={{ color: '#3ECF8E' }}>
+                    ≈ {(parseFloat(unitPrice) * (SettingsDB.get().aedRate || 0.105)).toFixed(3)} ر.ع / {t(unit as any)}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label className="text-xs">{t('supplier')}</Label><Input value={supplier} onChange={e => setSupplier(e.target.value)} className="mt-1" /></div>
