@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-const UNITS = ['kg', 'gram', 'liter', 'piece', 'box', 'pack', 'bottle', 'jar', 'bundle'];
+const UNITS = ['kg', 'gram', 'liter', 'piece', 'box', 'pack', 'bottle', 'jar', 'bundle', 'bag'];
 const PURCHASE_CATEGORIES = ['vegetables','groceries','packaging','operational','maintenance','electricity','water','gas','fuel','salary','courier','advertising','other'];
 
 export default function Purchases() {
