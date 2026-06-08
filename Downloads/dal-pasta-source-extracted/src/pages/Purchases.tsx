@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { t } from '@/lib/i18n';
-import { PurchaseDB, ReceiptDB, SettingsDB, type Purchase } from '@/lib/hybrid-db';
+import { PurchaseDB, ProductDB, ReceiptDB, SettingsDB, type Purchase } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const UNITS = ['kg', 'gram', 'liter', 'piece', 'box', 'pack', 'bottle', 'jar', 'bundle'];
-const PURCHASE_CATEGORIES = ['groceries','packaging','operational','maintenance','electricity','water','gas','fuel','salary','courier','advertising','other'];
+const PURCHASE_CATEGORIES = ['vegetables','groceries','packaging','operational','maintenance','electricity','water','gas','fuel','salary','courier','advertising','other'];
 
 export default function Purchases() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -17,6 +17,8 @@ export default function Purchases() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [knownSuppliers, setKnownSuppliers] = useState<string[]>([]);
+  const [knownProducts, setKnownProducts] = useState<string[]>([]);
 
   const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -32,7 +34,24 @@ export default function Purchases() {
 
   useEffect(() => { loadPurchases(); }, []);
 
-  const loadPurchases = async () => { setLoading(true); try { setPurchases(await PurchaseDB.getAll()); } catch (e) { console.error(e); } setLoading(false); };
+  const loadPurchases = async () => {
+    setLoading(true);
+    try {
+      const [allPurchases, allProducts] = await Promise.all([PurchaseDB.getAll(), ProductDB.getAll()]);
+      setPurchases(allPurchases);
+      const suppliers = [...new Set([
+        ...allPurchases.map(p => p.supplier),
+        ...allProducts.map(p => p.supplier),
+      ].filter(Boolean))];
+      const products = [...new Set([
+        ...allPurchases.map(p => p.productName),
+        ...allProducts.map(p => p.name),
+      ].filter(Boolean))];
+      setKnownSuppliers(suppliers);
+      setKnownProducts(products);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
 
   const resetForm = () => {
     setProductName(''); setQuantity(''); setUnit('kg'); setUnitPrice(''); setPurchCurrency('OMR');
@@ -81,8 +100,6 @@ export default function Purchases() {
   const unitPriceOMR = purchCurrency === 'AED' ? rawUnitPrice * aedRate : rawUnitPrice;
   const total = (parseFloat(quantity) || 0) * unitPriceOMR;
 
-  const uniqueProducts = [...new Set(purchases.map(p => p.productName).filter(Boolean))];
-  const uniqueSuppliers = [...new Set(purchases.map(p => p.supplier).filter(Boolean))];
 
   if (loading && purchases.length === 0) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#E5A53C', borderTopColor: 'transparent' }} /></div>;
@@ -146,7 +163,7 @@ export default function Purchases() {
               <div>
                 <Label className="text-xs">{t('productName')} *</Label>
                 <Input list="products-list" value={productName} onChange={e => setProductName(e.target.value)} className="mt-1" />
-                <datalist id="products-list">{uniqueProducts.map(p => <option key={p} value={p} />)}</datalist>
+                <datalist id="products-list">{knownProducts.map(p => <option key={p} value={p} />)}</datalist>
               </div>
               <div><Label className="text-xs">{t('category')}</Label>
                 <select value={category} onChange={e => setCategory(e.target.value)} className="w-full mt-1 text-sm rounded-lg border border-input px-3 py-2 bg-background">
@@ -179,7 +196,7 @@ export default function Purchases() {
               <div>
                 <Label className="text-xs">{t('supplier')}</Label>
                 <Input list="suppliers-list" value={supplier} onChange={e => setSupplier(e.target.value)} className="mt-1" />
-                <datalist id="suppliers-list">{uniqueSuppliers.map(s => <option key={s} value={s} />)}</datalist>
+                <datalist id="suppliers-list">{knownSuppliers.map(s => <option key={s} value={s} />)}</datalist>
               </div>
               <div><Label className="text-xs">{t('date')}</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1" /></div>
             </div>
