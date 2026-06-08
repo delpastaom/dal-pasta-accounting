@@ -78,6 +78,9 @@ export default function Purchases() {
   const unitPriceOMR = purchCurrency === 'AED' ? rawUnitPrice * aedRate : rawUnitPrice;
   const total = (parseFloat(quantity) || 0) * unitPriceOMR;
 
+  const uniqueProducts = [...new Set(purchases.map(p => p.productName).filter(Boolean))];
+  const uniqueSuppliers = [...new Set(purchases.map(p => p.supplier).filter(Boolean))];
+
   if (loading && purchases.length === 0) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#E5A53C', borderTopColor: 'transparent' }} /></div>;
   }
@@ -137,7 +140,11 @@ export default function Purchases() {
           <CardHeader><CardTitle className="text-base">{editingPurchase ? t('editPurchase') : t('newPurchase')}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><Label className="text-xs">{t('productName')} *</Label><Input value={productName} onChange={e => setProductName(e.target.value)} className="mt-1" /></div>
+              <div>
+                <Label className="text-xs">{t('productName')} *</Label>
+                <Input list="products-list" value={productName} onChange={e => setProductName(e.target.value)} className="mt-1" />
+                <datalist id="products-list">{uniqueProducts.map(p => <option key={p} value={p} />)}</datalist>
+              </div>
               <div><Label className="text-xs">{t('category')}</Label>
                 <select value={category} onChange={e => setCategory(e.target.value)} className="w-full mt-1 text-sm rounded-lg border border-input px-3 py-2 bg-background">
                   {PURCHASE_CATEGORIES.map(cat => <option key={cat} value={cat}>{t(cat as any)}</option>)}
@@ -166,7 +173,11 @@ export default function Purchases() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs">{t('supplier')}</Label><Input value={supplier} onChange={e => setSupplier(e.target.value)} className="mt-1" /></div>
+              <div>
+                <Label className="text-xs">{t('supplier')}</Label>
+                <Input list="suppliers-list" value={supplier} onChange={e => setSupplier(e.target.value)} className="mt-1" />
+                <datalist id="suppliers-list">{uniqueSuppliers.map(s => <option key={s} value={s} />)}</datalist>
+              </div>
               <div><Label className="text-xs">{t('date')}</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1" /></div>
             </div>
             <div>
