@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { t } from '@/lib/i18n';
-import { OrderDB, ProductDB, ExpenseDB, type Order } from '@/lib/hybrid-db';
+import { OrderDB, ProductDB, ExpenseDB, PurchaseDB, type Order } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface DashboardStats {
@@ -39,9 +39,10 @@ export default function Dashboard() {
     setLoading(true);
     try {
       // استدعاء واحد للطلبات + استدعاءات متوازية للباقي
-      const [allOrders, expenses, lowStock] = await Promise.all([
+      const [allOrders, expenses, purchases, lowStock] = await Promise.all([
         OrderDB.getAll(),
         ExpenseDB.getAll(),
+        PurchaseDB.getAll(),
         ProductDB.getLowStock(),
       ]);
 
@@ -56,12 +57,15 @@ export default function Dashboard() {
 
       const monthOrders = allOrders.filter(o => o.deliveryDate.startsWith(thisMonthKey) && o.status === 'completed');
       const monthExpenses = expenses.filter(e => e.date.startsWith(thisMonthKey));
+      const monthPurchases = purchases.filter(p => p.date.startsWith(thisMonthKey));
       const income = monthOrders.reduce((s, o) => s + o.total, 0);
-      const expTotal = monthExpenses.reduce((s, e) => s + e.amount, 0);
+      const expTotal = monthExpenses.reduce((s, e) => s + e.amount, 0)
+                     + monthPurchases.reduce((s, p) => s + p.total, 0);
       const avgOrder = monthOrders.length > 0 ? income / monthOrders.length : 0;
 
       const catMap: Record<string, number> = {};
       expenses.forEach(e => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
+      purchases.forEach(p => { const cat = p.category || 'other'; catMap[cat] = (catMap[cat] || 0) + p.total; });
       const totalExp = Object.values(catMap).reduce((s, v) => s + v, 0);
       const categoryBreakdown = Object.entries(catMap)
         .map(([category, amount]) => ({ category, amount, percentage: totalExp > 0 ? Math.round((amount / totalExp) * 100) : 0 }))
