@@ -552,8 +552,6 @@ export const ReportDB = {
       OrderDB.getAll(), ExpenseDB.getAll(), PurchaseDB.getAll(),
     ]);
     const orders = allOrders.filter(o => o.deliveryDate.startsWith(targetMonth) && o.status === 'completed');
-    // كل طلبات الشهر (مكتملة + معلقة) — للبريك إيفن
-    const allMonthOrders = allOrders.filter(o => o.deliveryDate.startsWith(targetMonth));
     const expenses = allExpenses.filter(e => e.date.startsWith(targetMonth));
     const purchases = allPurchases.filter(p => p.date.startsWith(targetMonth));
     const income = orders.reduce((s, o) => s + o.total, 0);
@@ -561,11 +559,8 @@ export const ReportDB = {
     const tablewareFees = orders.reduce((s, o) => s + (o.tablewareFee || 0), 0);
     const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
     const purchasesTotal = purchases.reduce((s, p) => s + p.total, 0);
-    const allOrdersTotal = allMonthOrders.reduce((s, o) => s + o.total, 0);
-    const avgOrderAll = allMonthOrders.length > 0 ? allOrdersTotal / allMonthOrders.length : 0;
     return {
       income, orders: orders.length, avgOrder: orders.length > 0 ? income / orders.length : 0,
-      avgOrderAll, allOrdersCount: allMonthOrders.length,
       deliveryFees, tablewareFees,
       expensesTotal, purchasesTotal,
       expenses: expensesTotal + purchasesTotal,
