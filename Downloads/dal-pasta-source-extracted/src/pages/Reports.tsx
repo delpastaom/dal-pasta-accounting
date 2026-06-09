@@ -19,7 +19,7 @@ export default function Reports() {
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [stats, setStats] = useState({ income: 0, expenses: 0, expensesTotal: 0, purchasesTotal: 0, profit: 0, orders: 0, avgOrder: 0, profitMargin: 0, deliveryFees: 0, tablewareFees: 0 });
+  const [stats, setStats] = useState({ income: 0, expenses: 0, expensesTotal: 0, purchasesTotal: 0, profit: 0, orders: 0, avgOrder: 0, avgOrderAll: 0, allOrdersCount: 0, profitMargin: 0, deliveryFees: 0, tablewareFees: 0 });
   const [categoryBreakdown, setCategoryBreakdown] = useState<{ category: string; amount: number; percentage: number }[]>([]);
   const [topDishes, setTopDishes] = useState<{ name: string; count: number; revenue: number }[]>([]);
   const [dailyBreakdown, setDailyBreakdown] = useState<{ date: string; orders: number; income: number }[]>([]);
@@ -62,6 +62,8 @@ export default function Reports() {
           purchasesTotal: monthStats.purchasesTotal || 0,
           profit,
           orders: monthStats.orders, avgOrder: monthStats.avgOrder,
+          avgOrderAll: monthStats.avgOrderAll || 0,
+          allOrdersCount: monthStats.allOrdersCount || 0,
           profitMargin: monthStats.income > 0 ? (profit / monthStats.income) * 100 : 0,
           deliveryFees: monthStats.deliveryFees || 0,
           tablewareFees: monthStats.tablewareFees || 0,
@@ -147,11 +149,13 @@ export default function Reports() {
       )}
 
       {/* ======== BREAK-EVEN ANALYSIS ======== */}
-      {stats.expenses > 0 && stats.avgOrder > 0 && (() => {
-        const breakEven = Math.ceil(stats.expenses / stats.avgOrder);
-        const progress = Math.min((stats.orders / Math.max(breakEven, 1)) * 100, 100);
-        const remaining = Math.max(breakEven - stats.orders, 0);
-        const covered = stats.orders >= breakEven;
+      {stats.expenses > 0 && stats.avgOrderAll > 0 && (() => {
+        const breakEven = Math.ceil(stats.expenses / stats.avgOrderAll);
+        // نعدّ كل طلبات الشهر (مكتملة + معلقة) للمقارنة
+        const currentOrders = stats.allOrdersCount;
+        const progress = Math.min((currentOrders / Math.max(breakEven, 1)) * 100, 100);
+        const remaining = Math.max(breakEven - currentOrders, 0);
+        const covered = currentOrders >= breakEven;
         return (
           <Card style={{ border: `2px solid ${covered ? '#86efac' : '#E5A53C'}` }}>
             <CardHeader className="pb-2">
@@ -169,7 +173,7 @@ export default function Reports() {
                   </div>
                   <div className="rounded-lg p-3 text-center" style={{ background: '#dbeafe' }}>
                     <p className="text-xs" style={{ color: '#8B7355' }}>معدل الطلب</p>
-                    <p className="font-bold text-sm" style={{ color: '#2563eb' }}>{stats.avgOrder.toFixed(2)} ر.ع</p>
+                    <p className="font-bold text-sm" style={{ color: '#2563eb' }}>{stats.avgOrderAll.toFixed(2)} ر.ع</p>
                   </div>
                 </div>
 
@@ -182,7 +186,12 @@ export default function Reports() {
                 {/* progress bar */}
                 <div>
                   <div className="flex justify-between text-xs mb-1.5">
-                    <span style={{ color: '#8B7355' }}>الحالي: <strong style={{ color: '#2C1810' }}>{stats.orders} طلب</strong></span>
+                    <span style={{ color: '#8B7355' }}>
+                      الحالي: <strong style={{ color: '#2C1810' }}>{currentOrders} طلب</strong>
+                      {stats.orders < currentOrders && (
+                        <span style={{ color: '#d97706' }}> ({stats.orders} مكتمل)</span>
+                      )}
+                    </span>
                     <span style={{ color: '#8B7355' }}>الهدف: <strong style={{ color: '#2C1810' }}>{breakEven} طلب</strong></span>
                   </div>
                   <div className="h-5 rounded-full overflow-hidden relative" style={{ background: '#F5E6C8' }}>
@@ -206,9 +215,13 @@ export default function Reports() {
                 {covered ? (
                   <div className="rounded-lg p-3 text-center" style={{ background: '#dcfce7', border: '1px solid #86efac' }}>
                     <p className="font-bold text-sm" style={{ color: '#16a34a' }}>✅ وصلت نقطة التعادل!</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
-                      ربحك الصافي: <strong>{stats.profit.toFixed(2)} ر.ع</strong> ({stats.profitMargin.toFixed(1)}%)
-                    </p>
+                    {stats.profit > 0 ? (
+                      <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
+                        ربحك الصافي: <strong>{stats.profit.toFixed(2)} ر.ع</strong> ({stats.profitMargin.toFixed(1)}%)
+                      </p>
+                    ) : (
+                      <p className="text-xs mt-0.5" style={{ color: '#166534' }}>الطلبات كافية — أكمل الشهر بنجاح 💪</p>
+                    )}
                   </div>
                 ) : (
                   <div className="rounded-lg p-3 text-center" style={{ background: '#fef3c7', border: '1px solid #fbbf24' }}>
