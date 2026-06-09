@@ -146,6 +146,82 @@ export default function Reports() {
         </div>
       )}
 
+      {/* ======== BREAK-EVEN ANALYSIS ======== */}
+      {stats.expenses > 0 && stats.avgOrder > 0 && (() => {
+        const breakEven = Math.ceil(stats.expenses / stats.avgOrder);
+        const progress = Math.min((stats.orders / Math.max(breakEven, 1)) * 100, 100);
+        const remaining = Math.max(breakEven - stats.orders, 0);
+        const covered = stats.orders >= breakEven;
+        return (
+          <Card style={{ border: `2px solid ${covered ? '#86efac' : '#E5A53C'}` }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                🎯 نقطة التعادل — كم طلب تحتاج؟
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {/* top two numbers */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg p-3 text-center" style={{ background: '#fee2e2' }}>
+                    <p className="text-xs" style={{ color: '#8B7355' }}>المصاريف الشهرية</p>
+                    <p className="font-bold text-sm" style={{ color: '#dc2626' }}>{stats.expenses.toFixed(2)} ر.ع</p>
+                  </div>
+                  <div className="rounded-lg p-3 text-center" style={{ background: '#dbeafe' }}>
+                    <p className="text-xs" style={{ color: '#8B7355' }}>معدل الطلب</p>
+                    <p className="font-bold text-sm" style={{ color: '#2563eb' }}>{stats.avgOrder.toFixed(2)} ر.ع</p>
+                  </div>
+                </div>
+
+                {/* big number */}
+                <div className="rounded-xl p-4 text-center" style={{ background: covered ? '#dcfce7' : '#fef3c7' }}>
+                  <p className="text-4xl font-black" style={{ color: covered ? '#16a34a' : '#d97706' }}>{breakEven}</p>
+                  <p className="text-xs mt-0.5 font-medium" style={{ color: '#8B7355' }}>طلب للوصول إلى التعادل</p>
+                </div>
+
+                {/* progress bar */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span style={{ color: '#8B7355' }}>الحالي: <strong style={{ color: '#2C1810' }}>{stats.orders} طلب</strong></span>
+                    <span style={{ color: '#8B7355' }}>الهدف: <strong style={{ color: '#2C1810' }}>{breakEven} طلب</strong></span>
+                  </div>
+                  <div className="h-5 rounded-full overflow-hidden relative" style={{ background: '#F5E6C8' }}>
+                    <div
+                      className="h-full rounded-full transition-all flex items-center justify-end pr-2"
+                      style={{
+                        width: `${Math.max(progress, 5)}%`,
+                        background: covered
+                          ? 'linear-gradient(90deg, #16a34a, #22c55e)'
+                          : 'linear-gradient(90deg, #E5A53C, #D4932A)',
+                      }}
+                    >
+                      {progress > 15 && (
+                        <span className="text-[10px] text-white font-bold">{progress.toFixed(0)}%</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* result message */}
+                {covered ? (
+                  <div className="rounded-lg p-3 text-center" style={{ background: '#dcfce7', border: '1px solid #86efac' }}>
+                    <p className="font-bold text-sm" style={{ color: '#16a34a' }}>✅ وصلت نقطة التعادل!</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
+                      ربحك الصافي: <strong>{stats.profit.toFixed(2)} ر.ع</strong> ({stats.profitMargin.toFixed(1)}%)
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg p-3 text-center" style={{ background: '#fef3c7', border: '1px solid #fbbf24' }}>
+                    <p className="font-bold text-sm" style={{ color: '#d97706' }}>⚡ تحتاج {remaining} طلب إضافي</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#92400e' }}>لتغطية المصاريف وتحقيق التعادل</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Delivery & Tableware Fees */}
       <div className="grid grid-cols-2 gap-3">
         <Card style={{ border: '1px solid #fbbf24' }}>
