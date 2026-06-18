@@ -289,6 +289,92 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
     if (win) { win.document.write(html); win.document.close(); }
   };
 
+  const previewReceipt = (order: Order) => {
+    const num = getOrderNum(order);
+    const balance = order.total - order.deposit;
+    const fmt = (n: number) => n.toFixed(3);
+    const itemRows = order.items.map(i => `
+      <div class="item">
+        <div class="item-name">${i.dishName}</div>
+        <div class="item-row">
+          <span class="item-price">${fmt(i.price)} ر.ع × ${i.quantity}</span>
+          <span class="item-total">${fmt(i.price * i.quantity)} ر.ع</span>
+        </div>
+      </div>`).join('');
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فاتورة #${num}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#F5E6C8;min-height:100vh;display:flex;justify-content:center;padding:20px;font-family:Arial,sans-serif}
+  .card{background:#fff;border-radius:20px;width:100%;max-width:360px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+  .header{background:linear-gradient(135deg,#E5A53C,#D4932A);padding:24px 20px;text-align:center;color:#fff}
+  .logo{font-size:26px;font-weight:900;letter-spacing:2px}
+  .sub{font-size:12px;opacity:0.85;margin-top:2px}
+  .order-badge{background:rgba(255,255,255,0.25);border-radius:30px;padding:6px 18px;margin-top:10px;display:inline-block;font-size:15px;font-weight:900;letter-spacing:1px}
+  .body{padding:20px}
+  .customer-box{background:#FFF9F0;border-radius:12px;padding:12px 14px;margin-bottom:16px;border:1px solid #F5E6C8}
+  .customer-name{font-size:17px;font-weight:900;color:#2C1810}
+  .customer-info{font-size:12px;color:#8B7355;margin-top:3px}
+  .section-label{font-size:11px;font-weight:700;color:#E5A53C;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .item{margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed #F0E0C0}
+  .item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .item-name{font-size:14px;font-weight:700;color:#2C1810}
+  .item-row{display:flex;justify-content:space-between;margin-top:3px}
+  .item-price{font-size:12px;color:#8B7355}
+  .item-total{font-size:13px;font-weight:700;color:#2C1810}
+  .totals{margin-top:16px;border-top:2px solid #F5E6C8;padding-top:14px}
+  .row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;color:#5C4A35}
+  .row-total{display:flex;justify-content:space-between;background:#FFF0D0;border-radius:10px;padding:10px 14px;margin-top:8px}
+  .row-total span:first-child{font-size:15px;font-weight:700;color:#2C1810}
+  .row-total span:last-child{font-size:18px;font-weight:900;color:#D4932A}
+  .row-balance{display:flex;justify-content:space-between;background:#FEE2E2;border-radius:10px;padding:10px 14px;margin-top:6px}
+  .row-balance span:first-child{font-size:14px;font-weight:700;color:#7F1D1D}
+  .row-balance span:last-child{font-size:16px;font-weight:900;color:#DC2626}
+  .notes{background:#FFFBEB;border-radius:10px;padding:10px 14px;margin-top:14px;font-size:12px;color:#7C6845;border:1px solid #FDE68A}
+  .footer{text-align:center;padding:16px;background:#FFF9F0;border-top:1px solid #F5E6C8}
+  .footer-main{font-size:14px;font-weight:700;color:#8B7355}
+  .footer-sub{font-size:11px;color:#A08B6D;margin-top:2px}
+</style></head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="logo">Del Pasta</div>
+    <div class="sub">مشروع منزلي · صحار · 90942558</div>
+    <div class="order-badge">طلب #${num}</div>
+  </div>
+  <div class="body">
+    <div class="customer-box">
+      <div class="customer-name">${order.customerName}</div>
+      <div class="customer-info">
+        ${order.customerPhone ? `📞 ${order.customerPhone}` : ''}
+        ${order.area ? `&nbsp;&nbsp;📍 ${order.area}` : ''}
+        <br>📅 التسليم: <b>${order.deliveryDate}</b>
+        ${order.deliveryTime ? `&nbsp; ⏰ ${order.deliveryTime}` : ''}
+      </div>
+    </div>
+    <div class="section-label">الأصناف</div>
+    ${itemRows}
+    <div class="totals">
+      ${order.deliveryFee > 0 ? `<div class="row"><span>🚗 رسوم التوصيل</span><span>${fmt(order.deliveryFee)} ر.ع</span></div>` : ''}
+      ${(order.tablewareFee || 0) > 0 ? `<div class="row"><span>🍽️ رسوم الأواني</span><span>${fmt(order.tablewareFee!)} ر.ع</span></div>` : ''}
+      <div class="row-total"><span>الإجمالي</span><span>${fmt(order.total)} ر.ع</span></div>
+      ${order.deposit > 0 ? `
+      <div class="row" style="margin-top:8px"><span>✅ العربون المدفوع</span><span style="color:#16a34a;font-weight:700">- ${fmt(order.deposit)} ر.ع</span></div>
+      <div class="row-balance"><span>المبلغ المتبقي</span><span>${fmt(balance)} ر.ع</span></div>` : ''}
+    </div>
+    ${order.notes ? `<div class="notes">📝 ${order.notes}</div>` : ''}
+  </div>
+  <div class="footer">
+    <div class="footer-main">شكراً لكم 🤍</div>
+    <div class="footer-sub">أكل متروس لذة من 2018</div>
+  </div>
+</div>
+</body></html>`;
+    const win = window.open('', '_blank', 'width=420,height=700');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
   const handleDelete = async (id: string) => {
     try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
@@ -581,6 +667,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
                   <button onClick={() => handleEdit(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-100" style={{ color: '#8B6914' }}>{t('edit')}</button>
                   <button onClick={() => setDeleteDialog(order.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-red-50 text-red-500">{t('delete')}</button>
                   <button onClick={() => shareWhatsApp(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-green-50 text-green-600">📲 {t('shareWhatsapp')}</button>
+                  <button onClick={() => previewReceipt(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-50" style={{ color: '#D4932A', border: '1px solid #E5A53C' }}>👁️ معاينة</button>
                   <button onClick={() => printCustomerReceipt(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-50" style={{ color: '#8B6914' }}>🧾 {t('customerReceipt')}</button>
                   <button onClick={() => printKitchenTicket(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-blue-50 text-blue-600">🍳 {t('kitchenTicket')}</button>
                 </div>
