@@ -58,6 +58,7 @@ export default function Orders() {
 
   const resetForm = () => {
     setCustomerName(''); setCustomerPhone(''); setArea('');
+    setCustomerSearch(''); setShowCustomerList(false);
     setOrderDate(new Date().toISOString().split('T')[0]);
     setDeliveryDate(new Date().toISOString().split('T')[0]);
     setOrderType('regular'); setItems([]); setDeliveryTime(''); setDeliveryFee(0); setTablewareFee(0);
@@ -372,22 +373,22 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
               <div className="relative">
                 <Label className="text-xs">{t('customerName')} *</Label>
                 <Input value={customerName}
-                  onChange={e => { setCustomerName(e.target.value); setCustomerSearch(e.target.value); setShowCustomerList(true); }}
-                  onFocus={() => setShowCustomerList(true)}
+                  onChange={e => { setCustomerName(e.target.value); setCustomerSearch(e.target.value); setShowCustomerList(e.target.value.length > 0); }}
+                  onBlur={() => setTimeout(() => setShowCustomerList(false), 200)}
                   className="mt-1" placeholder="اكتب أو اختر زبون" />
                 {showCustomerList && customerSearch.length > 0 && (
-                  <div className="absolute z-50 w-full bg-white border rounded-lg shadow-lg max-h-40 overflow-auto mt-1">
+                  <div className="absolute z-50 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-auto mt-1">
                     {customers.filter(c => c.name.includes(customerSearch) || c.phone.includes(customerSearch)).map(c => (
                       <button key={c.id} type="button"
-                        onClick={() => { setCustomerName(c.name); setCustomerPhone(c.phone); setArea(c.area); setShowCustomerList(false); }}
+                        onClick={() => { setCustomerName(c.name); setCustomerPhone(c.phone); setArea(c.area || ''); setShowCustomerList(false); setCustomerSearch(''); }}
                         className="w-full text-right px-3 py-2 hover:bg-amber-50 text-sm border-b last:border-0">
-                        <span className="font-medium">{c.name}</span>
-                        {c.phone && <span className="text-gray-400 mr-2 text-xs">{c.phone}</span>}
+                        <p className="font-medium">{c.name}</p>
+                        <p className="text-xs" style={{ color: '#8B7355' }}>
+                          {c.phone && <span>{c.phone}</span>}
+                          {c.area && <span> · 📍 {c.area}</span>}
+                        </p>
                       </button>
                     ))}
-                    <div className="w-full text-right px-3 py-2 text-xs" style={{ color: '#A08B6D' }}>
-                      يُحفظ تلقائياً عند حفظ الطلب ✓
-                    </div>
                   </div>
                 )}
               </div>
