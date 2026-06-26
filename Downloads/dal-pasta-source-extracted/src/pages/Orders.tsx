@@ -455,10 +455,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
   .footer-meta { font-size: 9px; color: #A08B6D; }
   .footer-meta p { margin-bottom: 2px; }
   .footer-meta strong { color: #5C4A35; }
-  .stamp { border: 2px solid #E5A53C; border-radius: 50%; width: 72px; height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #E5A53C; }
-  .stamp .s1 { font-size: 7px; font-weight: 700; }
-  .stamp .s2 { font-size: 14px; font-weight: 900; }
-  .stamp .s3 { font-size: 6px; }
+  .stamp-svg { width: 110px; height: 110px; }
 
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -538,11 +535,25 @@ ${watermark}
       ${cfg.vatNumber ? `<p>الرقم الضريبي: <strong>${cfg.vatNumber}</strong></p>` : ''}
       <p style="margin-top:4px;color:#C0A880">شكراً لثقتكم — أكل متروس لذة من 2018</p>
     </div>
-    <div class="stamp">
-      <div class="s1">دل باستا</div>
-      <div class="s2">✓</div>
-      <div class="s3">ISSUED</div>
-    </div>
+    <svg class="stamp-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="logo-clip"><circle cx="100" cy="100" r="42"/></clipPath>
+        <path id="top-arc" d="M 30,100 a 70,70 0 1,1 140,0" fill="none"/>
+        <path id="bot-arc" d="M 170,100 a 70,70 0 1,1 -140,0" fill="none"/>
+      </defs>
+      <circle cx="100" cy="100" r="96" fill="none" stroke="#C0945A" stroke-width="3"/>
+      <circle cx="100" cy="100" r="88" fill="none" stroke="#C0945A" stroke-width="1"/>
+      <circle cx="100" cy="100" r="85" fill="none" stroke="#C0945A" stroke-width="0.5" stroke-dasharray="3,3"/>
+      ${cfg.logoBase64
+        ? `<image href="${cfg.logoBase64}" x="58" y="58" width="84" height="84" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid slice"/>`
+        : `<text x="100" y="106" text-anchor="middle" font-size="22" font-weight="900" fill="#C0945A" font-family="Arial">${cfg.businessName}</text>`
+      }
+      <circle cx="100" cy="100" r="45" fill="none" stroke="#C0945A" stroke-width="1.5"/>
+      <text font-size="13" fill="#8B6914" font-weight="700" font-family="Arial"><textPath href="#top-arc" startOffset="50%" text-anchor="middle">${cfg.businessName} · ${cfg.businessCity}</textPath></text>
+      <text font-size="11" fill="#A08B6D" font-family="Arial"><textPath href="#bot-arc" startOffset="50%" text-anchor="middle">${cfg.crNumber ? 'CR ' + cfg.crNumber : cfg.businessSubtitle}</textPath></text>
+      <circle cx="27" cy="100" r="3" fill="#C0945A"/>
+      <circle cx="173" cy="100" r="3" fill="#C0945A"/>
+    </svg>
   </div>
 
 </div>
