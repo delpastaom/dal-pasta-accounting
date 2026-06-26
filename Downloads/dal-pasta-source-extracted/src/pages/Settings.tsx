@@ -13,6 +13,17 @@ export default function Settings() {
   const [lang, setLangState] = useState<Lang>(getLang());
   const [aedRate, setAedRate] = useState(String(SettingsDB.get().aedRate || 0.105));
   const [aedSaved, setAedSaved] = useState(false);
+
+  const s = SettingsDB.get();
+  const [bizName, setBizName] = useState(s.businessName);
+  const [bizSubtitle, setBizSubtitle] = useState(s.businessSubtitle);
+  const [bizPhone, setBizPhone] = useState(s.businessPhone);
+  const [bizAddress, setBizAddress] = useState(s.businessAddress);
+  const [bizCity, setBizCity] = useState(s.businessCity);
+  const [crNumber, setCrNumber] = useState(s.crNumber);
+  const [vatNumber, setVatNumber] = useState(s.vatNumber);
+  const [logoBase64, setLogoBase64] = useState(s.logoBase64);
+  const [bizSaved, setBizSaved] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -26,6 +37,19 @@ export default function Settings() {
   const [sbMessage, setSbMessage] = useState('');
 
   const handleLangChange = (newLang: Lang) => { setLang(newLang); setLangState(newLang); };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setLogoBase64(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleSaveBiz = () => {
+    SettingsDB.set({ businessName: bizName, businessSubtitle: bizSubtitle, businessPhone: bizPhone, businessAddress: bizAddress, businessCity: bizCity, crNumber, vatNumber, logoBase64 });
+    setBizSaved(true); setTimeout(() => setBizSaved(false), 2000);
+  };
 
   const handleChangePin = async () => {
     setPinMessage(''); setPinError(false);
@@ -92,6 +116,42 @@ export default function Settings() {
               </p>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* بيانات الفاتورة الرسمية */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-base">📄 بيانات الفاتورة الرسمية</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 gap-3">
+            <div><Label className="text-xs">اسم المنشأة</Label><Input value={bizName} onChange={e => setBizName(e.target.value)} className="mt-1" /></div>
+            <div><Label className="text-xs">الوصف (السطر الثاني)</Label><Input value={bizSubtitle} onChange={e => setBizSubtitle(e.target.value)} className="mt-1" placeholder="مشروع منزلي · صحار" /></div>
+            <div><Label className="text-xs">رقم الهاتف</Label><Input value={bizPhone} onChange={e => setBizPhone(e.target.value)} className="mt-1" type="tel" /></div>
+            <div><Label className="text-xs">العنوان التفصيلي</Label><Input value={bizAddress} onChange={e => setBizAddress(e.target.value)} className="mt-1" placeholder="مثال: طريق الساحل، حي النهضة" /></div>
+            <div><Label className="text-xs">المدينة / الولاية</Label><Input value={bizCity} onChange={e => setBizCity(e.target.value)} className="mt-1" placeholder="صحار، عُمان" /></div>
+            <div>
+              <Label className="text-xs">رقم السجل التجاري (CR)</Label>
+              <Input value={crNumber} onChange={e => setCrNumber(e.target.value)} className="mt-1 font-mono" placeholder="1234567" dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-xs">الرقم الضريبي (اختياري - إذا مسجل بالضريبة)</Label>
+              <Input value={vatNumber} onChange={e => setVatNumber(e.target.value)} className="mt-1 font-mono" placeholder="OM1234567890" dir="ltr" />
+            </div>
+            <div>
+              <Label className="text-xs">شعار المنشأة (علامة مائية في الفاتورة)</Label>
+              <div className="flex items-center gap-3 mt-1">
+                {logoBase64 && <img src={logoBase64} className="w-12 h-12 object-contain rounded-lg border" style={{ borderColor: '#E5A53C' }} />}
+                <div className="relative flex-1">
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <Button variant="outline" className="w-full text-sm gap-2">🖼️ {logoBase64 ? 'تغيير الشعار' : 'رفع الشعار'}</Button>
+                </div>
+                {logoBase64 && <button onClick={() => setLogoBase64('')} className="text-red-400 text-xs px-2 py-1 rounded hover:bg-red-50">حذف</button>}
+              </div>
+            </div>
+          </div>
+          <Button onClick={handleSaveBiz} className="w-full" style={{ background: '#E5A53C' }}>
+            {bizSaved ? '✅ تم الحفظ' : 'حفظ البيانات'}
+          </Button>
         </CardContent>
       </Card>
 

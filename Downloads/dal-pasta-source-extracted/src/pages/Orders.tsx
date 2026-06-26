@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { t } from '@/lib/i18n';
-import { OrderDB, DishDB, CustomerDB, type Order, type OrderItem, type Customer } from '@/lib/hybrid-db';
+import { OrderDB, DishDB, CustomerDB, SettingsDB, type Order, type OrderItem, type Customer } from '@/lib/hybrid-db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -375,6 +375,183 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
     if (win) { win.document.write(html); win.document.close(); }
   };
 
+  const printFormalInvoice = (order: Order) => {
+    const num = getOrderNum(order);
+    const cfg = SettingsDB.get();
+    const fmt = (n: number) => n.toFixed(3);
+    const today = new Date().toLocaleDateString('ar-OM', { year: 'numeric', month: 'long', day: 'numeric' });
+    const hasVat = !!cfg.vatNumber;
+    const vatRate = 0.05;
+    const subtotal = order.total;
+    const vatAmount = hasVat ? subtotal * vatRate : 0;
+    const grandTotal = subtotal + vatAmount;
+    const balance = grandTotal - order.deposit;
+
+    const itemRows = order.items.map((i, idx) => `
+      <tr class="${idx % 2 === 0 ? 'row-even' : ''}">
+        <td class="td-num">${idx + 1}</td>
+        <td class="td-desc">${i.dishName}</td>
+        <td class="td-qty">${i.quantity}</td>
+        <td class="td-price">${fmt(i.price)}</td>
+        <td class="td-total">${fmt(i.price * i.quantity)}</td>
+      </tr>`).join('');
+
+    const watermark = cfg.logoBase64
+      ? `<div class="watermark"><img src="${cfg.logoBase64}" /></div>`
+      : `<div class="watermark watermark-text">${cfg.businessName}</div>`;
+
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar">
+<head><meta charset="UTF-8"><title>فاتورة #${num}</title>
+<style>
+  @page { size: A4; margin: 15mm 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 11px; color: #1a1a1a; position: relative; }
+  .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; z-index: 0; pointer-events: none; }
+  .watermark img { width: 320px; height: 320px; object-fit: contain; }
+  .watermark-text { font-size: 90px; font-weight: 900; color: #E5A53C; white-space: nowrap; }
+  .content { position: relative; z-index: 1; }
+
+  /* HEADER */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 12px; border-bottom: 3px solid #E5A53C; margin-bottom: 16px; }
+  .header-logo { display: flex; align-items: center; gap: 10px; }
+  .header-logo img { width: 64px; height: 64px; object-fit: contain; }
+  .header-logo-text .name { font-size: 22px; font-weight: 900; color: #2C1810; }
+  .header-logo-text .sub { font-size: 10px; color: #8B7355; margin-top: 2px; }
+  .header-logo-text .phone { font-size: 11px; color: #5C4A35; margin-top: 3px; font-weight: 700; }
+  .header-right { text-align: left; }
+  .invoice-title { font-size: 20px; font-weight: 900; color: #E5A53C; }
+  .invoice-num { font-size: 13px; font-weight: 700; color: #2C1810; margin-top: 2px; }
+  .invoice-date { font-size: 10px; color: #8B7355; margin-top: 2px; }
+
+  /* INFO BOXES */
+  .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .info-box { border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px 12px; }
+  .info-box-title { font-size: 9px; font-weight: 700; color: #E5A53C; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #F5E6C8; padding-bottom: 5px; margin-bottom: 7px; }
+  .info-box p { font-size: 11px; color: #2C1810; margin-bottom: 2px; }
+  .info-box .highlight { font-size: 13px; font-weight: 900; color: #2C1810; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { background: #E5A53C; color: #fff; font-size: 10px; font-weight: 700; padding: 7px 8px; text-align: right; }
+  th:last-child, td:last-child { text-align: left; }
+  td { padding: 7px 8px; font-size: 11px; border-bottom: 1px solid #F0E8D8; }
+  .row-even { background: #FFFBF4; }
+  .td-num { width: 28px; text-align: center; color: #8B7355; font-size: 10px; }
+  .td-desc { font-weight: 600; }
+  .td-qty { width: 50px; text-align: center; }
+  .td-price { width: 80px; text-align: left; }
+  .td-total { width: 80px; font-weight: 700; }
+
+  /* TOTALS */
+  .totals-wrap { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+  .totals { width: 260px; }
+  .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; border-bottom: 1px solid #F0E8D8; }
+  .totals-row.grand { font-size: 14px; font-weight: 900; color: #2C1810; padding: 8px 0; border-top: 2px solid #E5A53C; border-bottom: 2px solid #E5A53C; }
+  .totals-row.balance { font-size: 12px; font-weight: 700; color: #DC2626; }
+  .totals-row.paid { color: #16a34a; }
+
+  /* FOOTER */
+  .footer { border-top: 2px solid #F5E6C8; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .footer-meta { font-size: 9px; color: #A08B6D; }
+  .footer-meta p { margin-bottom: 2px; }
+  .footer-meta strong { color: #5C4A35; }
+  .stamp { border: 2px solid #E5A53C; border-radius: 50%; width: 72px; height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #E5A53C; }
+  .stamp .s1 { font-size: 7px; font-weight: 700; }
+  .stamp .s2 { font-size: 14px; font-weight: 900; }
+  .stamp .s3 { font-size: 6px; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style></head>
+<body>
+${watermark}
+<div class="content">
+
+  <div class="header">
+    <div class="header-logo">
+      ${cfg.logoBase64 ? `<img src="${cfg.logoBase64}" />` : ''}
+      <div class="header-logo-text">
+        <div class="name">${cfg.businessName}</div>
+        <div class="sub">${cfg.businessSubtitle}</div>
+        <div class="phone">📞 ${cfg.businessPhone}</div>
+        ${cfg.businessAddress ? `<div class="sub">📍 ${cfg.businessAddress}</div>` : ''}
+        <div class="sub">${cfg.businessCity}</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="invoice-title">${hasVat ? 'فاتورة ضريبية' : 'فاتورة'}</div>
+      <div class="invoice-num">رقم: ${String(num).padStart(5, '0')}</div>
+      <div class="invoice-date">التاريخ: ${today}</div>
+      <div class="invoice-date">تاريخ التسليم: ${order.deliveryDate}</div>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-box">
+      <div class="info-box-title">بيانات المنشأة</div>
+      ${cfg.crNumber ? `<p>السجل التجاري: <strong>${cfg.crNumber}</strong></p>` : ''}
+      ${cfg.vatNumber ? `<p>الرقم الضريبي: <strong>${cfg.vatNumber}</strong></p>` : ''}
+      <p>${cfg.businessCity}</p>
+    </div>
+    <div class="info-box">
+      <div class="info-box-title">فاتورة إلى</div>
+      <p class="highlight">${order.customerName}</p>
+      ${order.customerPhone ? `<p>📞 ${order.customerPhone}</p>` : ''}
+      ${order.area ? `<p>📍 ${order.area}</p>` : ''}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="td-num">#</th>
+        <th class="td-desc">الصنف</th>
+        <th class="td-qty">الكمية</th>
+        <th class="td-price">سعر الوحدة (ر.ع)</th>
+        <th class="td-total">الإجمالي (ر.ع)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+      ${order.deliveryFee > 0 ? `<tr><td class="td-num"></td><td class="td-desc">🚗 رسوم التوصيل</td><td class="td-qty">1</td><td class="td-price">${fmt(order.deliveryFee)}</td><td class="td-total">${fmt(order.deliveryFee)}</td></tr>` : ''}
+      ${(order.tablewareFee || 0) > 0 ? `<tr><td class="td-num"></td><td class="td-desc">🍽️ رسوم الأواني</td><td class="td-qty">1</td><td class="td-price">${fmt(order.tablewareFee!)}</td><td class="td-total">${fmt(order.tablewareFee!)}</td></tr>` : ''}
+    </tbody>
+  </table>
+
+  <div class="totals-wrap">
+    <div class="totals">
+      <div class="totals-row"><span>المجموع قبل الضريبة</span><span>${fmt(subtotal)} ر.ع</span></div>
+      ${hasVat ? `<div class="totals-row"><span>ضريبة القيمة المضافة (5%)</span><span>${fmt(vatAmount)} ر.ع</span></div>` : ''}
+      <div class="totals-row grand"><span>الإجمالي الكلي</span><span>${fmt(grandTotal)} ر.ع</span></div>
+      ${order.deposit > 0 ? `
+      <div class="totals-row paid"><span>✅ العربون المدفوع</span><span>- ${fmt(order.deposit)} ر.ع</span></div>
+      <div class="totals-row balance"><span>المبلغ المتبقي</span><span>${fmt(balance)} ر.ع</span></div>` : ''}
+    </div>
+  </div>
+
+  ${order.notes ? `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;padding:8px 12px;margin-bottom:16px;font-size:11px;color:#7C6845"><b>ملاحظات:</b> ${order.notes}</div>` : ''}
+
+  <div class="footer">
+    <div class="footer-meta">
+      ${cfg.crNumber ? `<p>السجل التجاري: <strong>${cfg.crNumber}</strong></p>` : ''}
+      ${cfg.vatNumber ? `<p>الرقم الضريبي: <strong>${cfg.vatNumber}</strong></p>` : ''}
+      <p style="margin-top:4px;color:#C0A880">شكراً لثقتكم — أكل متروس لذة من 2018</p>
+    </div>
+    <div class="stamp">
+      <div class="s1">دل باستا</div>
+      <div class="s2">✓</div>
+      <div class="s3">ISSUED</div>
+    </div>
+  </div>
+
+</div>
+<script>window.onload=()=>{window.print();}</script>
+</body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
   const handleDelete = async (id: string) => {
     try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
@@ -668,6 +845,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
                   <button onClick={() => setDeleteDialog(order.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-red-50 text-red-500">{t('delete')}</button>
                   <button onClick={() => shareWhatsApp(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-green-50 text-green-600">📲 {t('shareWhatsapp')}</button>
                   <button onClick={() => previewReceipt(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-50" style={{ color: '#D4932A', border: '1px solid #E5A53C' }}>👁️ معاينة</button>
+                  <button onClick={() => printFormalInvoice(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-blue-50" style={{ color: '#1d4ed8', border: '1px solid #93c5fd' }}>📄 رسمية</button>
                   <button onClick={() => printCustomerReceipt(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-50" style={{ color: '#8B6914' }}>🧾 {t('customerReceipt')}</button>
                   <button onClick={() => printKitchenTicket(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-blue-50 text-blue-600">🍳 {t('kitchenTicket')}</button>
                 </div>

@@ -599,10 +599,20 @@ export const ReportDB = {
 // ==================== SETTINGS ====================
 export const SettingsDB = {
   get() {
-    const defaults = { pin: '1234', currency: 'OMR', lang: 'ar' as const, aedRate: 0.105 };
+    const defaults = {
+      pin: '1234', currency: 'OMR', lang: 'ar' as const, aedRate: 0.105,
+      businessName: 'دل باستا', businessSubtitle: 'مشروع منزلي · صحار',
+      businessPhone: '90942558', businessAddress: '', businessCity: 'صحار، عُمان',
+      crNumber: '', vatNumber: '', logoBase64: '',
+    };
     try { const data = localStorage.getItem('dp_settings'); return data ? { ...defaults, ...JSON.parse(data) } : defaults; } catch { return defaults; }
   },
-  set(settings: Partial<{ pin: string; currency: string; lang: 'ar' | 'en'; aedRate: number }>) {
+  set(settings: Partial<{
+    pin: string; currency: string; lang: 'ar' | 'en'; aedRate: number;
+    businessName: string; businessSubtitle: string; businessPhone: string;
+    businessAddress: string; businessCity: string;
+    crNumber: string; vatNumber: string; logoBase64: string;
+  }>) {
     localStorage.setItem('dp_settings', JSON.stringify({ ...this.get(), ...settings }));
   },
   verifyPin(pin: string): boolean { return this.get().pin === pin; },
