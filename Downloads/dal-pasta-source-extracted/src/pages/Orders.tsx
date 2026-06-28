@@ -17,6 +17,7 @@ export default function Orders() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterDate, setFilterDate] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Form state
@@ -563,6 +564,97 @@ ${watermark}
     if (win) { win.document.write(html); win.document.close(); }
   };
 
+  const printDaySummary = () => {
+    if (filteredOrders.length === 0) { alert('لا توجد طلبات لطباعتها'); return; }
+    const cfg = SettingsDB.get();
+    const fmt = (n: number) => n.toFixed(3);
+    const label = filterDate || 'كل الطلبات';
+    const dayTotal = filteredOrders.reduce((s, o) => s + o.total, 0);
+    const dayDeposits = filteredOrders.reduce((s, o) => s + o.deposit, 0);
+    const dayDelivery = filteredOrders.reduce((s, o) => s + (o.deliveryFee || 0), 0);
+
+    const rows = filteredOrders.map((o, idx) => {
+      const num = getOrderNum(o);
+      const itemsList = o.items.map(i => `${i.dishName} ×${i.quantity}`).join('، ');
+      return `<tr class="${idx % 2 === 0 ? 'even' : ''}">
+        <td class="c">${num}</td>
+        <td><b>${o.customerName}</b>${o.area ? `<br><span class="sub">${o.area}</span>` : ''}</td>
+        <td class="items">${itemsList}</td>
+        <td class="c">${o.deliveryTime || '-'}</td>
+        <td class="c status-${o.status}">${o.status === 'completed' ? '✅' : o.status === 'pending' ? '⏳' : '❌'}</td>
+        <td class="num">${fmt(o.total)}</td>
+        <td class="num">${o.deposit > 0 ? fmt(o.deposit) : '-'}</td>
+        <td class="num">${o.deposit > 0 ? fmt(o.total - o.deposit) : '-'}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طلبات ${label}</title>
+<style>
+  @page{size:A4 landscape;margin:10mm}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:10px;color:#1a1a1a}
+  .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #E5A53C;padding-bottom:8px;margin-bottom:10px}
+  .header-right h1{font-size:16px;color:#2C1810;font-weight:900}
+  .header-right p{font-size:10px;color:#8B7355;margin-top:2px}
+  .header-left{text-align:left}
+  .header-left .count{font-size:22px;font-weight:900;color:#E5A53C}
+  .header-left .lbl{font-size:9px;color:#8B7355}
+  table{width:100%;border-collapse:collapse;margin-bottom:10px}
+  th{background:#E5A53C;color:#fff;font-size:9px;font-weight:700;padding:5px 6px;text-align:right;white-space:nowrap}
+  td{padding:5px 6px;font-size:10px;border-bottom:1px solid #F0E8D8;vertical-align:top}
+  .even{background:#FFFBF4}
+  .c{text-align:center}
+  .num{text-align:left;font-weight:700;direction:ltr;white-space:nowrap}
+  .items{font-size:9px;color:#5C4A35;max-width:220px;line-height:1.4}
+  .sub{font-size:8px;color:#A08B6D}
+  .totals{display:flex;gap:16px;justify-content:flex-end;margin-top:6px;padding-top:8px;border-top:2px solid #E5A53C}
+  .tot-box{text-align:center;padding:6px 16px;border-radius:6px}
+  .tot-box .v{font-size:14px;font-weight:900}
+  .tot-box .l{font-size:8px;color:#8B7355;margin-top:1px}
+  .bg-green{background:#dcfce7} .bg-green .v{color:#16a34a}
+  .bg-amber{background:#fef3c7} .bg-amber .v{color:#d97706}
+  .bg-red{background:#fee2e2} .bg-red .v{color:#dc2626}
+  .bg-blue{background:#dbeafe} .bg-blue .v{color:#2563eb}
+  .footer{text-align:center;margin-top:8px;font-size:8px;color:#C0A880}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head>
+<body>
+<div class="header">
+  <div class="header-right">
+    <h1>${cfg.businessName} — ملخص الطلبات</h1>
+    <p>📅 ${label} ${filterDate ? '(' + new Date(filterDate).toLocaleDateString('ar-OM', { weekday: 'long' }) + ')' : ''}</p>
+  </div>
+  <div class="header-left">
+    <div class="count">${filteredOrders.length}</div>
+    <div class="lbl">طلب</div>
+  </div>
+</div>
+<table>
+  <thead><tr>
+    <th class="c">#</th>
+    <th>العميل</th>
+    <th>الأصناف</th>
+    <th class="c">الوقت</th>
+    <th class="c">الحالة</th>
+    <th class="num">الإجمالي</th>
+    <th class="num">العربون</th>
+    <th class="num">المتبقي</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="totals">
+  <div class="tot-box bg-green"><div class="v">${fmt(dayTotal)} ر.ع</div><div class="l">إجمالي اليوم</div></div>
+  <div class="tot-box bg-amber"><div class="v">${fmt(dayDeposits)} ر.ع</div><div class="l">العربون</div></div>
+  <div class="tot-box bg-red"><div class="v">${fmt(dayTotal - dayDeposits)} ر.ع</div><div class="l">المتبقي</div></div>
+  <div class="tot-box bg-blue"><div class="v">${fmt(dayDelivery)} ر.ع</div><div class="l">توصيل</div></div>
+</div>
+<div class="footer">${cfg.businessName} — ${cfg.businessSubtitle} · تقرير مطبوع ${new Date().toLocaleDateString('ar-OM')}</div>
+<script>window.onload=()=>{window.print();}</script>
+</body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
   const handleDelete = async (id: string) => {
     try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
@@ -611,8 +703,9 @@ ${watermark}
     const matchSearch = !searchQuery ||
       o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.customerPhone.includes(searchQuery);
-    return matchStatus && matchSearch;
-  }), [orders, filterStatus, searchQuery]);
+    const matchDate = !filterDate || o.deliveryDate === filterDate;
+    return matchStatus && matchSearch && matchDate;
+  }), [orders, filterStatus, searchQuery, filterDate]);
 
   if (loading && orders.length === 0) {
     return (
@@ -624,12 +717,14 @@ ${watermark}
 
   return (
     <div className="space-y-4 animate-fadeIn">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <Button onClick={() => { resetForm(); setShowForm(true); }} className="gap-2" style={{ background: '#E5A53C' }}>
           <span>+</span> {t('newOrder')}
         </Button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Input placeholder={t('search')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-32 lg:w-48 text-sm" />
+          <Input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="w-36 text-sm" />
+          {filterDate && <button onClick={() => setFilterDate('')} className="text-xs px-2 py-1 rounded-lg hover:bg-red-50 text-red-400">✕</button>}
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="text-sm rounded-lg border border-input px-3 py-2 bg-background">
             <option value="all">{t('all')}</option>
             <option value="pending">{t('pending')}</option>
@@ -638,6 +733,26 @@ ${watermark}
           </select>
         </div>
       </div>
+
+      {/* Date summary bar + print */}
+      {filterDate && (
+        <div className="flex items-center justify-between rounded-xl p-3" style={{ background: '#FFF5E6', border: '1px solid #F5E6C8' }}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-black" style={{ color: '#E5A53C' }}>{filteredOrders.length}</span>
+            <div>
+              <p className="text-sm font-bold" style={{ color: '#2C1810' }}>
+                طلب يوم {new Date(filterDate).toLocaleDateString('ar-OM', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <p className="text-xs" style={{ color: '#8B7355' }}>
+                الإجمالي: {filteredOrders.reduce((s, o) => s + o.total, 0).toFixed(2)} ر.ع
+              </p>
+            </div>
+          </div>
+          <button onClick={printDaySummary} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all active:scale-95" style={{ background: '#E5A53C' }}>
+            🖨️ طباعة الكل
+          </button>
+        </div>
+      )}
 
       {showForm && (
         <Card className="animate-fadeIn">
