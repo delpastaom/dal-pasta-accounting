@@ -542,18 +542,18 @@ ${watermark}
         <path id="top-arc" d="M 30,100 a 70,70 0 1,1 140,0" fill="none"/>
         <path id="bot-arc" d="M 170,100 a 70,70 0 1,1 -140,0" fill="none"/>
       </defs>
-      <circle cx="100" cy="100" r="96" fill="none" stroke="#C0945A" stroke-width="3"/>
-      <circle cx="100" cy="100" r="88" fill="none" stroke="#C0945A" stroke-width="1"/>
-      <circle cx="100" cy="100" r="85" fill="none" stroke="#C0945A" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <circle cx="100" cy="100" r="96" fill="none" stroke="#1e3a5f" stroke-width="5"/>
+      <circle cx="100" cy="100" r="87" fill="none" stroke="#1e3a5f" stroke-width="2"/>
+      <circle cx="100" cy="100" r="83" fill="none" stroke="#1e3a5f" stroke-width="1" stroke-dasharray="4,3"/>
       ${cfg.logoBase64
         ? `<image href="${cfg.logoBase64}" x="58" y="58" width="84" height="84" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid slice"/>`
-        : `<text x="100" y="106" text-anchor="middle" font-size="22" font-weight="900" fill="#C0945A" font-family="Arial">${cfg.businessName}</text>`
+        : `<text x="100" y="106" text-anchor="middle" font-size="22" font-weight="900" fill="#1e3a5f" font-family="Arial">${cfg.businessName}</text>`
       }
-      <circle cx="100" cy="100" r="45" fill="none" stroke="#C0945A" stroke-width="1.5"/>
-      <text font-size="13" fill="#8B6914" font-weight="700" font-family="Arial"><textPath href="#top-arc" startOffset="50%" text-anchor="middle">${cfg.businessName} · ${cfg.businessCity}</textPath></text>
-      <text font-size="11" fill="#A08B6D" font-family="Arial"><textPath href="#bot-arc" startOffset="50%" text-anchor="middle">${cfg.crNumber ? 'CR ' + cfg.crNumber : cfg.businessSubtitle}</textPath></text>
-      <circle cx="27" cy="100" r="3" fill="#C0945A"/>
-      <circle cx="173" cy="100" r="3" fill="#C0945A"/>
+      <circle cx="100" cy="100" r="45" fill="none" stroke="#1e3a5f" stroke-width="2.5"/>
+      <text font-size="13" fill="#1e3a5f" font-weight="700" font-family="Arial"><textPath href="#top-arc" startOffset="50%" text-anchor="middle">${cfg.businessName} · ${cfg.businessCity}</textPath></text>
+      <text font-size="11" fill="#2c5282" font-family="Arial"><textPath href="#bot-arc" startOffset="50%" text-anchor="middle">${cfg.crNumber ? 'CR ' + cfg.crNumber : cfg.businessSubtitle}</textPath></text>
+      <circle cx="27" cy="100" r="4" fill="#1e3a5f"/>
+      <circle cx="173" cy="100" r="4" fill="#1e3a5f"/>
     </svg>
   </div>
 
