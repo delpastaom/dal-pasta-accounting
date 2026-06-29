@@ -519,9 +519,9 @@ ${watermark}
 
   <div class="totals-wrap">
     <div class="totals">
-      <div class="totals-row"><span>المجموع قبل الضريبة</span><span>${fmt(subtotal)} ر.ع</span></div>
-      ${hasVat ? `<div class="totals-row"><span>ضريبة القيمة المضافة (5%)</span><span>${fmt(vatAmount)} ر.ع</span></div>` : ''}
-      <div class="totals-row grand"><span>الإجمالي الكلي</span><span>${fmt(grandTotal)} ر.ع</span></div>
+      ${hasVat ? `<div class="totals-row"><span>المجموع قبل الضريبة</span><span>${fmt(subtotal)} ر.ع</span></div>
+      <div class="totals-row"><span>ضريبة القيمة المضافة (5%)</span><span>${fmt(vatAmount)} ر.ع</span></div>` : ''}
+      <div class="totals-row grand"><span>الإجمالي</span><span>${fmt(grandTotal)} ر.ع</span></div>
       ${order.deposit > 0 ? `
       <div class="totals-row paid"><span>✅ العربون المدفوع</span><span>- ${fmt(order.deposit)} ر.ع</span></div>
       <div class="totals-row balance"><span>المبلغ المتبقي</span><span>${fmt(balance)} ر.ع</span></div>` : ''}
