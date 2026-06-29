@@ -191,9 +191,9 @@ export default function Orders() {
     `).join('');
     const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>فاتورة #${num}</title>
 <style>
-@page{margin:3mm}
+@page{margin:0}
 *{box-sizing:border-box;margin:0;padding:0;color:#000!important;background:none!important}
-html,body{width:100%;font-family:Arial,sans-serif;font-size:11px}
+html,body{width:100%;font-family:Arial,sans-serif;font-size:11px;padding:3mm}
 .logo{font-size:18px;font-weight:900;text-align:center;letter-spacing:2px}
 .sub-logo{font-size:11px;text-align:center;margin-bottom:3px}
 .order-num{font-size:13px;font-weight:900;text-align:center;border:2px solid #000;padding:3px;margin:4px 0}
@@ -251,9 +251,9 @@ ${order.notes ? `<hr class="dash"><div class="info">ملاحظة: ${order.notes}
     `).join('');
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Kitchen #${num}</title>
 <style>
-@page{margin:3mm}
+@page{margin:0}
 *{box-sizing:border-box;margin:0;padding:0;color:#000!important;background:none!important}
-html,body{width:100%;font-family:Arial,sans-serif;font-size:11px}
+html,body{width:100%;font-family:Arial,sans-serif;font-size:11px;padding:3mm}
 .header{text-align:center;font-size:9px;font-weight:bold;letter-spacing:2px;margin-bottom:2px}
 .order-box{border:3px solid #000;text-align:center;padding:4px;margin:3px 0}
 .order-box .label{font-size:10px;font-weight:900;letter-spacing:2px}
@@ -404,9 +404,9 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
     const html = `<!DOCTYPE html><html dir="rtl" lang="ar">
 <head><meta charset="UTF-8"><title>فاتورة #${num}</title>
 <style>
-  @page { size: A4; margin: 15mm 12mm; }
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 11px; color: #1a1a1a; position: relative; }
+  body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 11px; color: #1a1a1a; position: relative; padding: 15mm 12mm; }
   .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; z-index: 0; pointer-events: none; }
   .watermark img { width: 320px; height: 320px; object-fit: contain; }
   .watermark-text { font-size: 90px; font-weight: 900; color: #E5A53C; white-space: nowrap; }
@@ -590,9 +590,9 @@ ${watermark}
 
     const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طلبات ${label}</title>
 <style>
-  @page{size:A4 landscape;margin:10mm}
+  @page{size:A4 landscape;margin:0}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;font-size:10px;color:#1a1a1a}
+  body{font-family:Arial,sans-serif;font-size:10px;color:#1a1a1a;padding:10mm}
   .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #E5A53C;padding-bottom:8px;margin-bottom:10px}
   .header-right h1{font-size:16px;color:#2C1810;font-weight:900}
   .header-right p{font-size:10px;color:#8B7355;margin-top:2px}
