@@ -62,7 +62,7 @@ export default function AIInvoice() {
         'content-type': 'application/json',
         'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages }),
+      body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 1024, messages }),
     });
     if (!response.ok) {
       const err = await response.json();
