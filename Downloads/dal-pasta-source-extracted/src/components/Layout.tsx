@@ -17,6 +17,7 @@ const menuItems = [
   { path: '/purchases', icon: '📦', label: 'purchases' },
   { path: '/inventory', icon: '🥘', label: 'inventory' },
   { path: '/reports', icon: '📈', label: 'reports' },
+  { path: '/ai-invoice', icon: '🤖', label: 'aiInvoice' },
   { path: '/settings', icon: '⚙️', label: 'settings' },
 ];
 

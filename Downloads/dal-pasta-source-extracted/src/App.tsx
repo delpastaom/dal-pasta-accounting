@@ -10,6 +10,7 @@ import Inventory from '@/pages/Inventory';
 import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 import Dishes from '@/pages/Dishes';
+import AIInvoice from '@/pages/AIInvoice';
 import { seedData, isCloudConnected } from '@/lib/hybrid-db';
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/dishes" element={<Dishes />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/ai-invoice" element={<AIInvoice />} />
       </Routes>
     </Layout>
   );

@@ -72,10 +72,13 @@ const translations = {
     gas: 'غاز',
     fuel: 'وقود',
     salary: 'رواتب',
+    workers: 'عمال',
     courier: 'مندوب / توصيل',
     groceries: 'بقالة',
     vegetables: 'خضروات',
+    vegshop: 'محل الخضرة',
     packaging: 'تغليف',
+    cleaning: 'نظافة',
     other: 'أخرى',
     productName: 'اسم المنتج',
     quantity: 'الكمية',
@@ -224,6 +227,7 @@ const translations = {
     noOutstanding: 'لا توجد مبالغ مستحقة',
     remaining: 'المتبقي',
     dueDate: 'تاريخ التسليم',
+    aiInvoice: 'فواتير ذكية',
   },
   en: {
     appName: 'Dal Pasta',
@@ -294,10 +298,13 @@ const translations = {
     gas: 'Gas',
     fuel: 'Fuel',
     salary: 'Salary',
+    workers: 'Workers',
     courier: 'Courier / Delivery',
     groceries: 'Groceries',
     vegetables: 'Vegetables',
+    vegshop: 'Vegetable Shop',
     packaging: 'Packaging',
+    cleaning: 'Cleaning',
     other: 'Other',
     productName: 'Product Name',
     quantity: 'Quantity',
@@ -446,6 +453,7 @@ const translations = {
     noOutstanding: 'No outstanding balances',
     remaining: 'Remaining',
     dueDate: 'Delivery Date',
+    aiInvoice: 'AI Invoices',
   }
 };
 
