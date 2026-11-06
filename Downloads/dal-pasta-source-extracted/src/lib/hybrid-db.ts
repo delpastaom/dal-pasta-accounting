@@ -420,14 +420,25 @@ export const DishDB = {
 // ==================== PURCHASES ====================
 export const PurchaseDB = {
   async getAll(): Promise<Purchase[]> {
+    const localItems = localDB.PurchaseDB.getAll();
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
         const { data, error } = await sb.from('purchases').select('*').order('date', { ascending: false });
-        if (!error && data) return (data as any[]).map(rowToPurchase);
+        if (!error && data) {
+          const sbItems = (data as any[]).map(rowToPurchase);
+          if (sbItems.length > 0) {
+            // دمج Supabase + localStorage بدون تكرار (بناءً على المنتج+التاريخ+الإجمالي)
+            const sbKeys = new Set(sbItems.map((p: Purchase) => `${p.productName}|${p.date}|${p.total}`));
+            const localOnly = localItems.filter(p => !sbKeys.has(`${p.productName}|${p.date}|${p.total}`));
+            return [...sbItems, ...localOnly].sort((a, b) => b.date.localeCompare(a.date));
+          }
+          // Supabase رجّع فارغاً (على الأرجح RLS) → استخدم localStorage
+          return localItems;
+        }
       }
     }
-    return localDB.PurchaseDB.getAll();
+    return localItems;
   },
 
   async add(purchase: Omit<Purchase, 'id' | 'createdAt'>): Promise<Purchase> {
