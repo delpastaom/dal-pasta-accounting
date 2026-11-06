@@ -427,14 +427,7 @@ export const PurchaseDB = {
         const { data, error } = await sb.from('purchases').select('*').order('date', { ascending: false });
         if (!error && data) {
           const sbItems = (data as any[]).map(rowToPurchase);
-          if (sbItems.length > 0) {
-            // دمج Supabase + localStorage بدون تكرار (بناءً على المنتج+التاريخ+الإجمالي)
-            const sbKeys = new Set(sbItems.map((p: Purchase) => `${p.productName}|${p.date}|${p.total}`));
-            const localOnly = localItems.filter(p => !sbKeys.has(`${p.productName}|${p.date}|${p.total}`));
-            return [...sbItems, ...localOnly].sort((a, b) => b.date.localeCompare(a.date));
-          }
-          // Supabase رجّع فارغاً (على الأرجح RLS) → استخدم localStorage
-          return localItems;
+          if (sbItems.length > 0) return sbItems;
         }
       }
     }
@@ -453,8 +446,6 @@ export const PurchaseDB = {
         if (error) throw new Error(`Supabase: ${error.message} (${error.code})`);
         if (data) {
           const row = rowToPurchase(data);
-          // احفظ نسخة في localStorage أيضاً (ضمان القراءة حتى لو Supabase RLS يمنع)
-          try { await localDB.PurchaseDB.add({ ...purchase }); } catch { /* اختياري */ }
           // تحديث المخزون بشكل منفصل
           try {
             const products = await ProductDB.getAll();

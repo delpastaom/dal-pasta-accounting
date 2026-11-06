@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { PurchaseDB } from '@/lib/hybrid-db';
+import { fixSwappedInvoiceDate } from '@/lib/invoice-date';
 import { t } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -200,6 +201,7 @@ export default function AIInvoice() {
 }
 ${namesSection}
 قواعد مهمة:
+- التاريخ في الفواتير العُمانية يُكتب يوم/شهر/سنة: 06/11/2026 تعني 6 نوفمبر 2026 وتُكتب 2026-11-06، وليس 11 يونيو
 - استخرج كل الأصناف حتى لو كانت كثيرة
 - تجاهل أصناف FOC أو العروض المجانية (سعرها صفر)
 - اسم المنتج: نوع المنتج فقط بدون أحجام أو كميات (الكمية تروح في حقل quantity)
@@ -222,7 +224,9 @@ ${namesSection}
   ) => {
     const allPurchases = await PurchaseDB.getAll();
     const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const finalDate = date && date !== 'YYYY-MM-DD' ? date : new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    const dateFix = fixSwappedInvoiceDate(date && date !== 'YYYY-MM-DD' ? date : today, today);
+    const finalDate = dateFix.date;
     const allNames = [...new Set(allPurchases.map(p => p.productName).filter(Boolean))];
 
     const newInvoices: PendingInvoice[] = items.map((item, idx) => {
@@ -287,6 +291,7 @@ ${namesSection}
       let status: InvoiceStatus = 'ready';
       if (isDuplicate) status = 'duplicate';
       else if (issues.length > 0) status = 'review';
+      if (dateFix.corrected) issues.push(`صُحّح التاريخ من ${date} إلى ${finalDate} — تأكد منه`);
 
       return {
         id: `inv_${Date.now()}_${idx}`,

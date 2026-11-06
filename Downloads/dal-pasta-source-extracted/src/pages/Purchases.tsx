@@ -200,10 +200,11 @@ export default function Purchases() {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#E5A53C', borderTopColor: 'transparent' }} /></div>;
   }
 
+  // الأحدث إدخالًا أولًا، حتى يظهر ما اعتُمد للتو مهما كان تاريخ فاتورته
   const filteredPurchases = purchases.filter(p =>
     p.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.supplier.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.date.localeCompare(a.date));
 
   const compareResults = searchQuery.trim().length > 1 ? (() => {
     const matched = purchases.filter(p => p.productName.toLowerCase().includes(searchQuery.toLowerCase()));
