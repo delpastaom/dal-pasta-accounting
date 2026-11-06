@@ -45,6 +45,7 @@ export interface Purchase {
   date: string;
   category: string;
   receipt: string | null;
+  notes?: string;
   createdAt: string;
 }
 
@@ -147,6 +148,7 @@ function rowToPurchase(row: any): Purchase {
     date: row.date || '',
     category: row.category || 'other',
     receipt: row.receipt_url || null,
+    notes: row.notes || '',
     createdAt: row.created_at || new Date().toISOString(),
   };
 }
@@ -437,15 +439,21 @@ export const PurchaseDB = {
           unit_price: purchase.unitPrice, total: purchase.total, supplier: purchase.supplier,
           date: purchase.date, category: purchase.category || 'other', receipt_url: purchase.receipt,
         }).select().single();
-        if (!error && data) {
+        if (error) throw new Error(`Supabase: ${error.message} (${error.code})`);
+        if (data) {
           const row = rowToPurchase(data);
-          const products = await ProductDB.getAll();
-          const existing = products.find(p => p.name.toLowerCase() === row.productName.toLowerCase());
-          if (existing) {
-            await ProductDB.update(existing.id, { currentStock: existing.currentStock + row.quantity, avgUnitPrice: (existing.avgUnitPrice + row.unitPrice) / 2 });
-          } else {
-            await ProductDB.add({ name: row.productName, unit: row.unit, currentStock: row.quantity, reorderLevel: 5, avgUnitPrice: row.unitPrice, supplier: row.supplier });
-          }
+          // احفظ نسخة في localStorage أيضاً (ضمان القراءة حتى لو Supabase RLS يمنع)
+          try { await localDB.PurchaseDB.add({ ...purchase }); } catch { /* اختياري */ }
+          // تحديث المخزون بشكل منفصل
+          try {
+            const products = await ProductDB.getAll();
+            const existing = products.find(p => p.name.toLowerCase() === row.productName.toLowerCase());
+            if (existing) {
+              await ProductDB.update(existing.id, { currentStock: existing.currentStock + row.quantity, avgUnitPrice: (existing.avgUnitPrice + row.unitPrice) / 2 });
+            } else {
+              await ProductDB.add({ name: row.productName, unit: row.unit, currentStock: row.quantity, reorderLevel: 5, avgUnitPrice: row.unitPrice, supplier: row.supplier });
+            }
+          } catch { /* تحديث المخزون اختياري */ }
           return row;
         }
       }

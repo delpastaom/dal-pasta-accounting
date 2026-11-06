@@ -13,6 +13,7 @@ export default function Dishes() {
   const [showForm, setShowForm] = useState(false);
   const [editingDish, setEditingDish] = useState<Dish | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
+  const [dishSearch, setDishSearch] = useState('');
 
   const [name, setName] = useState('');
   const [nameEn, setNameEn] = useState('');
@@ -132,6 +133,14 @@ export default function Dishes() {
         </Card>
       )}
 
+      {dishes.length > 0 && (
+        <Input
+          placeholder="🔍 ابحث في الأصناف..."
+          value={dishSearch}
+          onChange={e => setDishSearch(e.target.value)}
+        />
+      )}
+
       <div className="space-y-2">
         {dishes.length === 0 ? (
           <Card>
@@ -143,6 +152,7 @@ export default function Dishes() {
           dishes
             .slice()
             .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+            .filter(d => !dishSearch || d.name.includes(dishSearch) || (d.nameEn || '').toLowerCase().includes(dishSearch.toLowerCase()))
             .map(dish => (
               <Card key={dish.id} className="overflow-hidden transition-all hover:shadow-md">
                 <CardContent className="p-4">

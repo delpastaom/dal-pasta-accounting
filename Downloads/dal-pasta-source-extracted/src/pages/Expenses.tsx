@@ -7,13 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-const EXPENSE_CATEGORIES = ['monthly','operational','maintenance','advertising','development','electricity','water','internet','gas','fuel','salary','courier','groceries','packaging','other'];
+const EXPENSE_CATEGORIES = ['monthly','operational','maintenance','advertising','development','electricity','water','internet','gas','fuel','salary','workers','courier','groceries','packaging','cleaning','vegshop','other'];
 
 export default function Expenses() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [filterCategory, setFilterCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +77,10 @@ export default function Expenses() {
 
   const viewReceipt = (receiptId: string | null) => { if (!receiptId) return; const data = ReceiptDB.get(receiptId); if (data) setReceiptPreview(data); };
 
-  const filteredExpenses = expenses.filter(e => filterCategory === 'all' || e.category === filterCategory);
+  const filteredExpenses = expenses.filter(e =>
+    (filterCategory === 'all' || e.category === filterCategory) &&
+    (!searchQuery || e.description.toLowerCase().includes(searchQuery.toLowerCase()) || t(e.category as any).includes(searchQuery))
+  );
 
   if (loading && expenses.length === 0) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#E5A53C', borderTopColor: 'transparent' }} /></div>;
@@ -84,12 +88,15 @@ export default function Expenses() {
 
   return (
     <div className="space-y-4 animate-fadeIn">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <Button onClick={() => { resetForm(); setShowForm(true); }} className="gap-2" style={{ background: '#dc2626' }}><span>+</span> {t('newExpense')}</Button>
-        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="text-sm rounded-lg border border-input px-3 py-2 bg-background">
-          <option value="all">{t('all')}</option>
-          {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{t(cat as any)}</option>)}
-        </select>
+        <div className="flex gap-2 flex-wrap">
+          <Input placeholder="🔍 بحث..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-32 text-sm" />
+          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="text-sm rounded-lg border border-input px-3 py-2 bg-background">
+            <option value="all">{t('all')}</option>
+            {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{t(cat as any)}</option>)}
+          </select>
+        </div>
       </div>
 
       {showForm && (

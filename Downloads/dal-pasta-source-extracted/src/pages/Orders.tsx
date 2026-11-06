@@ -13,6 +13,8 @@ export default function Orders() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerList, setShowCustomerList] = useState(false);
+  const [phoneSearch, setPhoneSearch] = useState('');
+  const [showPhoneList, setShowPhoneList] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -59,7 +61,7 @@ export default function Orders() {
 
   const resetForm = () => {
     setCustomerName(''); setCustomerPhone(''); setArea('');
-    setCustomerSearch(''); setShowCustomerList(false);
+    setCustomerSearch(''); setShowCustomerList(false); setPhoneSearch(''); setShowPhoneList(false);
     setOrderDate(new Date().toISOString().split('T')[0]);
     setDeliveryDate(new Date().toISOString().split('T')[0]);
     setOrderType('regular'); setItems([]); setDeliveryTime(''); setDeliveryFee(0); setTablewareFee(0);
@@ -133,8 +135,8 @@ export default function Orders() {
         }
       }
 
-      await loadData();
       if (andNew) { resetForm(); } else { resetForm(); setShowForm(false); }
+      loadData();
     } catch (e: any) {
       console.error(e);
       alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}\n\nتأكد من تشغيل migrations قاعدة البيانات.`);
@@ -245,7 +247,7 @@ ${order.notes ? `<hr class="dash"><div class="info">ملاحظة: ${order.notes}
     const num = getOrderNum(order);
     const itemRows = order.items.map(i => `
       <tr>
-        <td class="td-item">${i.dishNameEn || i.dishName}${i.dishNameEn ? `<div class="td-ar">${i.dishName}</div>` : ''}</td>
+        <td class="td-item">${i.dishNameEn || i.dishName}</td>
         <td class="td-qty">x${i.quantity}</td>
       </tr>
     `).join('');
@@ -659,6 +661,11 @@ ${watermark}
     try { await OrderDB.delete(id); setDeleteDialog(null); await loadData(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
+  const handleQuickStatus = async (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    try { await OrderDB.update(orderId, { status: newStatus }); } catch { await loadData(); }
+  };
+
   const addDishItem = (dish: { name: string; nameEn?: string; price: number; cost: number }) => {
     setItems(prev => {
       const existing = prev.find(i => i.dishName === dish.name);
@@ -781,7 +788,25 @@ ${watermark}
                   </div>
                 )}
               </div>
-              <div><Label className="text-xs">{t('customerPhone')}</Label><Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="mt-1" type="tel" /></div>
+              <div className="relative">
+                <Label className="text-xs">{t('customerPhone')}</Label>
+                <Input value={customerPhone}
+                  onChange={e => { setCustomerPhone(e.target.value); setPhoneSearch(e.target.value); setShowPhoneList(e.target.value.length > 0); }}
+                  onBlur={() => setTimeout(() => setShowPhoneList(false), 200)}
+                  className="mt-1" type="tel" placeholder="مثال: 9XXXXXXX" />
+                {showPhoneList && phoneSearch.length > 0 && (
+                  <div className="absolute z-50 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-auto mt-1">
+                    {customers.filter(c => c.phone.includes(phoneSearch) || c.name.includes(phoneSearch)).slice(0, 6).map(c => (
+                      <button key={c.id} type="button"
+                        onClick={() => { setCustomerName(c.name); setCustomerPhone(c.phone); setArea(c.area || ''); setShowPhoneList(false); setPhoneSearch(''); }}
+                        className="w-full text-right px-3 py-2 hover:bg-amber-50 text-sm border-b last:border-0">
+                        <p className="font-medium">{c.name}</p>
+                        <p className="text-xs" style={{ color: '#8B7355' }}>{c.phone}{c.area && ` · 📍 ${c.area}`}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><Label className="text-xs">{t('area')}</Label><Input value={area} onChange={e => setArea(e.target.value)} className="mt-1" /></div>
@@ -966,7 +991,21 @@ ${watermark}
                     {order.type === 'advance' && <p className="text-[10px]" style={{ color: '#8B6914' }}>{t('deposit')}: {order.deposit.toFixed(2)}</p>}
                   </div>
                 </div>
-                <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid rgba(229,165,60,0.15)' }}>
+                <div className="flex gap-1.5 mt-3 pt-3 flex-wrap items-center" style={{ borderTop: '1px solid rgba(229,165,60,0.15)' }}>
+                  <select
+                    value={order.status}
+                    onChange={e => handleQuickStatus(order.id, e.target.value as 'pending' | 'completed' | 'cancelled')}
+                    className={`text-xs rounded-lg border px-2 py-1.5 font-medium ${
+                      order.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                      order.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                      'bg-red-50 text-red-500 border-red-200'
+                    }`}
+                  >
+                    <option value="pending">⏳ {t('pending')}</option>
+                    <option value="completed">✅ {t('completed')}</option>
+                    <option value="cancelled">❌ {t('cancelled')}</option>
+                  </select>
+                  <span className="text-gray-200 self-center">|</span>
                   <button onClick={() => handleEdit(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-amber-100" style={{ color: '#8B6914' }}>{t('edit')}</button>
                   <button onClick={() => setDeleteDialog(order.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-red-50 text-red-500">{t('delete')}</button>
                   <button onClick={() => shareWhatsApp(order)} className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-green-50 text-green-600">📲 {t('shareWhatsapp')}</button>
