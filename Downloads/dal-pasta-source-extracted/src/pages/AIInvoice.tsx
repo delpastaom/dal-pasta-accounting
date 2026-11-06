@@ -24,6 +24,7 @@ interface PendingInvoice {
   productName: string;
   productNameOriginal: string;
   packageSpec: string;
+  itemsPerUnit: number;    // عدد القطع داخل وحدة الشراء
   quantity: number;
   unit: string;
   unitPrice: number;       // السعر قبل الضريبة
@@ -203,7 +204,7 @@ ${namesSection}
 - تجاهل أصناف FOC أو العروض المجانية (سعرها صفر)
 - اسم المنتج: نوع المنتج فقط بدون أحجام أو كميات (الكمية تروح في حقل quantity)
   مثال صح: "زيتون أسود شرائح" — مثال خطأ: "زيتون أسود 4.4كجم×4"
-- itemsPerUnit: عدد القطع الفردية داخل وحدة الشراء (مثلاً كرتون 150 علبة → 150، كرتون 12 كيس → 12)، اكتب 1 إذا لم ينطبق
+- itemsPerUnit: عدد القطع الفردية داخل وحدة الشراء. أمثلة: "1x10pkt" أو "10pkt" → 10، "12x500g" → 12، "CTN/150" → 150. اكتب 1 إذا لم ينطبق
 - اسم المورد: بالعربي دائماً (ترجم أو عرّب الاسم الإنجليزي)
 - unitPriceBeforeVAT: سعر الوحدة الواحدة قبل الضريبة
 - vatAmount: ضريبة الوحدة الواحدة فقط (وليس إجمالي الضريبة)
@@ -295,6 +296,7 @@ ${namesSection}
         productName,
         productNameOriginal: productNameEn,
         packageSpec,
+        itemsPerUnit,
         quantity: qty,
         unit: (item.unit as string) || 'قطعة',
         unitPrice,
@@ -303,9 +305,7 @@ ${namesSection}
         supplier: supplier || '',
         date: finalDate,
         category: getCategoryForProduct(productName) || (item.category as string) || 'other',
-        notes: itemsPerUnit > 1 && total > 0
-          ? `سعر القطعة المفردة = ${(total / (qty * itemsPerUnit)).toFixed(3)} ر.ع`
-          : '',
+        notes: '',
         nameSource,
         createdAt: new Date().toISOString(),
         suggestions,
@@ -445,7 +445,6 @@ ${namesSection}
   const upd = (field: keyof PendingInvoice, value: unknown) => {
     if (!reviewing) return;
     const updated = { ...reviewing, [field]: value };
-    // إعادة حساب الإجمالي تلقائياً عند تغيير الكمية أو السعر أو الضريبة
     if (field === 'quantity' || field === 'unitPrice' || field === 'vatAmount') {
       const qty = field === 'quantity' ? (value as number) : updated.quantity;
       const price = field === 'unitPrice' ? (value as number) : updated.unitPrice;
@@ -453,6 +452,12 @@ ${namesSection}
       updated.total = parseFloat((qty * (price + vat)).toFixed(3));
     }
     setReviewing(updated);
+  };
+
+  const perPiecePrice = (inv: PendingInvoice) => {
+    const ipu = inv.itemsPerUnit || 1;
+    if (ipu <= 1 || inv.total <= 0) return null;
+    return (inv.total / (inv.quantity * ipu)).toFixed(3);
   };
 
   const applySuggestion = (name: string) => {
@@ -770,6 +775,18 @@ ${namesSection}
                   </select>
                 </div>
                 <div>
+                  <Label className="text-xs">قطع في الكرتون / الوحدة</Label>
+                  <Input type="number" step="1" min="1" value={reviewing.itemsPerUnit || 1}
+                    onChange={e => upd('itemsPerUnit', parseInt(e.target.value) || 1)} className="mt-1"
+                    style={{ borderColor: (reviewing.itemsPerUnit || 1) > 1 ? '#E5A53C' : undefined }} />
+                  {(reviewing.itemsPerUnit || 1) > 1 && reviewing.total > 0 && (
+                    <p className="text-[11px] mt-1 font-semibold" style={{ color: '#16a34a' }}>
+                      سعر القطعة = {(reviewing.total / (reviewing.quantity * (reviewing.itemsPerUnit || 1))).toFixed(3)} ر.ع
+                    </p>
+                  )}
+                </div>
+                <div />
+                <div>
                   <Label className="text-xs">سعر الوحدة (قبل الضريبة)</Label>
                   <Input type="number" step="0.001" value={reviewing.unitPrice}
                     onChange={e => upd('unitPrice', parseFloat(e.target.value) || 0)} className="mt-1" />
@@ -823,6 +840,12 @@ ${namesSection}
                   <span>الإجمالي المدفوع</span>
                   <span style={{ color: '#E5A53C' }}>{reviewing.total.toFixed(3)} ر.ع</span>
                 </div>
+                {perPiecePrice(reviewing) && (
+                  <div className="flex justify-between text-xs font-semibold pt-1" style={{ borderTop: '1px solid rgba(229,165,60,0.3)', color: '#16a34a' }}>
+                    <span>سعر القطعة المفردة ({reviewing.itemsPerUnit} قطعة/كرتون)</span>
+                    <span>{perPiecePrice(reviewing)} ر.ع</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">
