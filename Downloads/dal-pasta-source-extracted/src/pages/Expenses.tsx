@@ -64,8 +64,7 @@ export default function Expenses() {
 
   const handleDelete = async (id: string) => {
     const expense = await ExpenseDB.getById(id);
-    if (expense?.receipt) ReceiptDB.delete(expense.receipt);
-    try { await ExpenseDB.delete(id); setDeleteDialog(null); await loadExpenses(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
+    try { await ExpenseDB.delete(id); if (expense?.receipt) ReceiptDB.delete(expense.receipt); setDeleteDialog(null); await loadExpenses(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

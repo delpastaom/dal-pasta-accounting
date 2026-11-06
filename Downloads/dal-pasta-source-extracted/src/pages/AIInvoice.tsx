@@ -419,6 +419,7 @@ ${namesSection}
   const handleApproveAll = async () => {
     const readyList = pending.filter(p => p.status === 'ready');
     const errors: string[] = [];
+    const failedIds = new Set<string>();
     for (const inv of readyList) {
       try {
         if (inv.productNameOriginal && inv.productName && inv.productNameOriginal !== inv.productName) {
@@ -430,9 +431,10 @@ ${namesSection}
           unitPrice: inv.unitPrice, total: inv.total, supplier: inv.supplier,
           date: inv.date, category: inv.category, receipt: null, notes: inv.notes || '',
         });
-      } catch (e) { errors.push(inv.productName + ': ' + (e instanceof Error ? e.message : '')); }
+      } catch (e) { failedIds.add(inv.id); errors.push(inv.productName + ': ' + (e instanceof Error ? e.message : '')); }
     }
-    const remaining = getPending().filter(p => p.status !== 'ready');
+    // ما فشل حفظه يبقى في القائمة لإعادة المحاولة
+    const remaining = getPending().filter(p => p.status !== 'ready' || failedIds.has(p.id));
     savePending(remaining); setPending(remaining);
     if (errors.length > 0) alert('فشل حفظ بعض الأصناف:\n' + errors.join('\n'));
   };

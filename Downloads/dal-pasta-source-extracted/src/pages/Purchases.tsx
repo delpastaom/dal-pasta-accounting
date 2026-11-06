@@ -113,8 +113,7 @@ export default function Purchases() {
 
   const handleDelete = async (id: string) => {
     const purchase = await PurchaseDB.getById(id);
-    if (purchase?.receipt) ReceiptDB.delete(purchase.receipt);
-    try { await PurchaseDB.delete(id); setDeleteDialog(null); await loadPurchases(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
+    try { await PurchaseDB.delete(id); if (purchase?.receipt) ReceiptDB.delete(purchase.receipt); setDeleteDialog(null); await loadPurchases(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

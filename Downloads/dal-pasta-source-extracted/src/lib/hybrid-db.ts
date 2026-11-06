@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConnected } from './supabase';
+import { fetchAllRows } from './fetch-all';
 import * as localDB from './db';
 import type { OrderItem } from './db';
 
@@ -153,6 +155,38 @@ function rowToPurchase(row: any): Purchase {
   };
 }
 
+// ترتيب النتائج بعد القراءة على دفعات: الأحدث تاريخًا أولًا، والأقدم إضافةً أولًا للقوائم بلا تاريخ
+const byDateDesc = (a: string, b: string) => (b || '').localeCompare(a || '');
+const byCreatedAsc = (a: { createdAt: string }, b: { createdAt: string }) => a.createdAt.localeCompare(b.createdAt);
+
+export const CLOUD_READ_ERROR_EVENT = 'dp-cloud-read-error';
+
+// عند فشل القراءة تُعرض نسخة المتصفح، وقد تكون قديمة؛ فنبلّغ الواجهة لتنبّه المستخدم
+async function readAll(sb: SupabaseClient, table: string): Promise<{ data: any[] | null; error: unknown }> {
+  const result = await fetchAllRows(sb, table);
+  if (result.error && typeof window !== 'undefined') window.dispatchEvent(new Event(CLOUD_READ_ERROR_EVENT));
+  return result;
+}
+
+// الكتابة في السحابة: أي فشل يُرفع إلى الشاشة بدل الحفظ في المتصفح بصمت.
+// وعدد الصفوف يُفحص لأن الصف المحجوب بالصلاحيات يرد «نجاحًا» دون أن يتغير شيء.
+function cloudWriteError(error: { message: string }): Error {
+  return new Error(`تعذر الحفظ في السحابة: ${error.message}`);
+}
+
+async function cloudUpdate(sb: SupabaseClient, table: string, id: string, values: any): Promise<any> {
+  const { data, error } = await sb.from(table).update(values).eq('id', id).select();
+  if (error) throw cloudWriteError(error);
+  if (!data || data.length === 0) throw new Error('لم يُحفظ التعديل: السجل غير موجود أو لا تملك صلاحية تعديله');
+  return data[0];
+}
+
+async function cloudDelete(sb: SupabaseClient, table: string, id: string): Promise<void> {
+  const { data, error } = await sb.from(table).delete().eq('id', id).select('id');
+  if (error) throw cloudWriteError(error);
+  if (!data || data.length === 0) throw new Error('لم يُحذف السجل: غير موجود أو لا تملك صلاحية حذفه');
+}
+
 // ==================== SYNC STATUS ====================
 export function isCloudConnected(): boolean {
   return isSupabaseConnected();
@@ -164,8 +198,10 @@ export const OrderDB = {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('orders').select('*').order('delivery_date', { ascending: false }).order('created_at', { ascending: false });
-        if (!error && data) return (data as any[]).map(rowToOrder);
+        const { data, error } = await readAll(sb, 'orders');
+        if (!error && data) {
+          return data.map(rowToOrder).sort((a, b) => byDateDesc(a.deliveryDate, b.deliveryDate) || byDateDesc(a.createdAt, b.createdAt));
+        }
       }
     }
     return localDB.OrderDB.getAll();
@@ -217,8 +253,7 @@ export const OrderDB = {
         if (order.total !== undefined) updateData.total = order.total;
         if (order.status !== undefined) updateData.status = order.status;
         if (order.notes !== undefined) updateData.notes = order.notes;
-        const { error } = await sb.from('orders').update(updateData).eq('id', id);
-        if (!error) { const all = await this.getAll(); return all.find(o => o.id === id) || null; }
+        return rowToOrder(await cloudUpdate(sb, 'orders', id, updateData));
       }
     }
     return localDB.OrderDB.update(id, order);
@@ -227,7 +262,7 @@ export const OrderDB = {
   async delete(id: string): Promise<boolean> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { const { error } = await sb.from('orders').delete().eq('id', id); if (!error) return true; }
+      if (sb) { await cloudDelete(sb, 'orders', id); return true; }
     }
     return localDB.OrderDB.delete(id);
   },
@@ -255,8 +290,8 @@ export const ExpenseDB = {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('expenses').select('*').order('date', { ascending: false });
-        if (!error && data) return (data as any[]).map(rowToExpense);
+        const { data, error } = await readAll(sb, 'expenses');
+        if (!error && data) return data.map(rowToExpense).sort((a, b) => byDateDesc(a.date, b.date));
       }
     }
     return localDB.ExpenseDB.getAll();
@@ -270,7 +305,8 @@ export const ExpenseDB = {
           category: expense.category, amount: expense.amount, date: expense.date,
           description: expense.description, receipt_url: expense.receipt,
         }).select().single();
-        if (!error && data) return rowToExpense(data);
+        if (error) throw cloudWriteError(error);
+        return rowToExpense(data);
       }
     }
     return localDB.ExpenseDB.add(expense);
@@ -286,8 +322,7 @@ export const ExpenseDB = {
         if (expense.date !== undefined) updateData.date = expense.date;
         if (expense.description !== undefined) updateData.description = expense.description;
         if (expense.receipt !== undefined) updateData.receipt_url = expense.receipt;
-        const { error } = await sb.from('expenses').update(updateData).eq('id', id);
-        if (!error) { const all = await this.getAll(); return all.find(e => e.id === id) || null; }
+        return rowToExpense(await cloudUpdate(sb, 'expenses', id, updateData));
       }
     }
     return localDB.ExpenseDB.update(id, expense);
@@ -296,7 +331,7 @@ export const ExpenseDB = {
   async delete(id: string): Promise<boolean> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { const { error } = await sb.from('expenses').delete().eq('id', id); if (!error) return true; }
+      if (sb) { await cloudDelete(sb, 'expenses', id); return true; }
     }
     return localDB.ExpenseDB.delete(id);
   },
@@ -313,8 +348,8 @@ export const ProductDB = {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('products').select('*');
-        if (!error && data) return (data as any[]).map(rowToProduct);
+        const { data, error } = await readAll(sb, 'products');
+        if (!error && data) return data.map(rowToProduct).sort(byCreatedAsc);
       }
     }
     return localDB.ProductDB.getAll();
@@ -328,7 +363,8 @@ export const ProductDB = {
           name: product.name, unit: product.unit, current_stock: product.currentStock,
           reorder_level: product.reorderLevel, avg_unit_price: product.avgUnitPrice, supplier: product.supplier,
         }).select().single();
-        if (!error && data) return rowToProduct(data);
+        if (error) throw cloudWriteError(error);
+        return rowToProduct(data);
       }
     }
     return localDB.ProductDB.add(product);
@@ -345,8 +381,7 @@ export const ProductDB = {
         if (product.reorderLevel !== undefined) updateData.reorder_level = product.reorderLevel;
         if (product.avgUnitPrice !== undefined) updateData.avg_unit_price = product.avgUnitPrice;
         if (product.supplier !== undefined) updateData.supplier = product.supplier;
-        const { error } = await sb.from('products').update(updateData).eq('id', id);
-        if (!error) { const all = await this.getAll(); return all.find(p => p.id === id) || null; }
+        return rowToProduct(await cloudUpdate(sb, 'products', id, updateData));
       }
     }
     return localDB.ProductDB.update(id, product);
@@ -355,7 +390,7 @@ export const ProductDB = {
   async delete(id: string): Promise<boolean> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { const { error } = await sb.from('products').delete().eq('id', id); if (!error) return true; }
+      if (sb) { await cloudDelete(sb, 'products', id); return true; }
     }
     return localDB.ProductDB.delete(id);
   },
@@ -372,8 +407,8 @@ export const DishDB = {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('dishes').select('*');
-        if (!error && data) return (data as any[]).map(rowToDish);
+        const { data, error } = await readAll(sb, 'dishes');
+        if (!error && data) return data.map(rowToDish).sort(byCreatedAsc);
       }
     }
     return localDB.DishDB.getAll();
@@ -386,7 +421,8 @@ export const DishDB = {
         const insertData: any = { name: dish.name, price: dish.price, cost: dish.cost };
         if (dish.nameEn) insertData.name_en = dish.nameEn;
         const { data, error } = await sb.from('dishes').insert(insertData).select().single();
-        if (!error && data) return rowToDish(data);
+        if (error) throw cloudWriteError(error);
+        return rowToDish(data);
       }
     }
     return localDB.DishDB.add(dish);
@@ -401,8 +437,7 @@ export const DishDB = {
         if (dish.nameEn !== undefined) updateData.name_en = dish.nameEn;
         if (dish.price !== undefined) updateData.price = dish.price;
         if (dish.cost !== undefined) updateData.cost = dish.cost;
-        const { error } = await sb.from('dishes').update(updateData).eq('id', id);
-        if (!error) { const all = await this.getAll(); return all.find(d => d.id === id) || null; }
+        return rowToDish(await cloudUpdate(sb, 'dishes', id, updateData));
       }
     }
     return localDB.DishDB.update(id, dish);
@@ -411,7 +446,7 @@ export const DishDB = {
   async delete(id: string): Promise<boolean> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { const { error } = await sb.from('dishes').delete().eq('id', id); if (!error) return true; }
+      if (sb) { await cloudDelete(sb, 'dishes', id); return true; }
     }
     return localDB.DishDB.delete(id);
   },
@@ -424,9 +459,9 @@ export const PurchaseDB = {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('purchases').select('*').order('date', { ascending: false });
+        const { data, error } = await readAll(sb, 'purchases');
         if (!error && data) {
-          const sbItems = (data as any[]).map(rowToPurchase);
+          const sbItems = data.map(rowToPurchase).sort((a, b) => byDateDesc(a.date, b.date));
           if (sbItems.length > 0) return sbItems;
         }
       }
@@ -455,7 +490,7 @@ export const PurchaseDB = {
             } else {
               await ProductDB.add({ name: row.productName, unit: row.unit, currentStock: row.quantity, reorderLevel: 5, avgUnitPrice: row.unitPrice, supplier: row.supplier });
             }
-          } catch { /* تحديث المخزون اختياري */ }
+          } catch (e) { console.error('تعذر تحديث المخزون', e); /* المشتريات حُفظت، والمخزون لا يوقفها */ }
           return row;
         }
       }
@@ -477,8 +512,7 @@ export const PurchaseDB = {
         if (purchase.date !== undefined) updateData.date = purchase.date;
         if (purchase.receipt !== undefined) updateData.receipt_url = purchase.receipt;
         if (purchase.category !== undefined) updateData.category = purchase.category;
-        const { error } = await sb.from('purchases').update(updateData).eq('id', id);
-        if (!error) { const all = await this.getAll(); return all.find(p => p.id === id) || null; }
+        return rowToPurchase(await cloudUpdate(sb, 'purchases', id, updateData));
       }
     }
     return localDB.PurchaseDB.update(id, purchase);
@@ -487,7 +521,7 @@ export const PurchaseDB = {
   async delete(id: string): Promise<boolean> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { const { error } = await sb.from('purchases').delete().eq('id', id); if (!error) return true; }
+      if (sb) { await cloudDelete(sb, 'purchases', id); return true; }
     }
     return localDB.PurchaseDB.delete(id);
   },
@@ -610,7 +644,7 @@ export const ReportDB = {
 export const SettingsDB = {
   get() {
     const defaults = {
-      pin: '1234', currency: 'OMR', lang: 'ar' as const, aedRate: 0.105,
+      currency: 'OMR', lang: 'ar' as const, aedRate: 0.105,
       businessName: 'دل باستا', businessSubtitle: 'مشروع منزلي · صحار',
       businessPhone: '90942558', businessAddress: '', businessCity: 'صحار، عُمان',
       crNumber: '', vatNumber: '', logoBase64: '',
@@ -618,17 +652,12 @@ export const SettingsDB = {
     try { const data = localStorage.getItem('dp_settings'); return data ? { ...defaults, ...JSON.parse(data) } : defaults; } catch { return defaults; }
   },
   set(settings: Partial<{
-    pin: string; currency: string; lang: 'ar' | 'en'; aedRate: number;
+    currency: string; lang: 'ar' | 'en'; aedRate: number;
     businessName: string; businessSubtitle: string; businessPhone: string;
     businessAddress: string; businessCity: string;
     crNumber: string; vatNumber: string; logoBase64: string;
   }>) {
     localStorage.setItem('dp_settings', JSON.stringify({ ...this.get(), ...settings }));
-  },
-  verifyPin(pin: string): boolean { return this.get().pin === pin; },
-  changePin(currentPin: string, newPin: string): boolean {
-    if (this.get().pin !== currentPin) return false;
-    this.set({ pin: newPin }); return true;
   },
 };
 
@@ -672,23 +701,38 @@ export interface Customer {
   createdAt: string;
 }
 
+function rowToCustomer(row: any): Customer {
+  return {
+    id: row.id,
+    name: row.name || '',
+    phone: row.phone || '',
+    area: row.area || '',
+    notes: row.notes || '',
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
 export const CustomerDB = {
   async getAll(): Promise<Customer[]> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
       if (sb) {
-        const { data, error } = await sb.from('customers').select('*').order('name');
-        if (!error && data) return data as Customer[];
+        const { data, error } = await readAll(sb, 'customers');
+        if (!error && data) return data.map(rowToCustomer).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
       }
     }
     return JSON.parse(localStorage.getItem('dp_customers') || '[]');
   },
   async add(c: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
-    const newC: Customer = { ...c, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { await sb.from('customers').insert({ ...c, created_at: newC.createdAt }); }
+      if (sb) {
+        const { data, error } = await sb.from('customers').insert(c).select().single();
+        if (error) throw cloudWriteError(error);
+        return rowToCustomer(data);
+      }
     }
+    const newC: Customer = { ...c, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const all = JSON.parse(localStorage.getItem('dp_customers') || '[]');
     localStorage.setItem('dp_customers', JSON.stringify([...all, newC]));
     return newC;
@@ -696,7 +740,11 @@ export const CustomerDB = {
   async update(id: string, c: Partial<Customer>): Promise<void> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { await sb.from('customers').update(c).eq('id', id); }
+      if (sb) {
+        const { name, phone, area, notes } = c;
+        await cloudUpdate(sb, 'customers', id, { name, phone, area, notes });
+        return;
+      }
     }
     const all: Customer[] = JSON.parse(localStorage.getItem('dp_customers') || '[]');
     localStorage.setItem('dp_customers', JSON.stringify(all.map(x => x.id === id ? { ...x, ...c } : x)));
@@ -704,7 +752,10 @@ export const CustomerDB = {
   async delete(id: string): Promise<void> {
     if (isSupabaseConnected()) {
       const sb = getSupabase();
-      if (sb) { await sb.from('customers').delete().eq('id', id); }
+      if (sb) {
+        await cloudDelete(sb, 'customers', id);
+        return;
+      }
     }
     const all: Customer[] = JSON.parse(localStorage.getItem('dp_customers') || '[]');
     localStorage.setItem('dp_customers', JSON.stringify(all.filter(x => x.id !== id)));
@@ -714,33 +765,4 @@ export const CustomerDB = {
 export function resetAll() {
   ['dp_orders', 'dp_expenses', 'dp_purchases', 'dp_products', 'dp_dishes', 'dp_settings'].forEach(k => localStorage.removeItem(k));
   for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k?.startsWith(RECEIPT_PREFIX)) localStorage.removeItem(k); }
-}
-
-// ==================== SEED DATA ====================
-export async function seedData() {
-  const existing = await OrderDB.getAll();
-  if (existing.length > 0) return;
-
-  const sampleProducts = [
-    { name: 'Pasta', unit: 'kg', currentStock: 15, reorderLevel: 5, avgUnitPrice: 1.2, supplier: 'Carrefour' },
-    { name: 'Chicken Breast', unit: 'kg', currentStock: 8, reorderLevel: 3, avgUnitPrice: 2.5, supplier: 'Lulu' },
-    { name: 'Cheese', unit: 'kg', currentStock: 4, reorderLevel: 2, avgUnitPrice: 3.0, supplier: 'Carrefour' },
-    { name: 'Tomato Sauce', unit: 'bottle', currentStock: 6, reorderLevel: 3, avgUnitPrice: 1.5, supplier: 'Lulu' },
-    { name: 'Olive Oil', unit: 'bottle', currentStock: 3, reorderLevel: 2, avgUnitPrice: 4.0, supplier: 'Carrefour' },
-    { name: 'Garlic', unit: 'kg', currentStock: 2, reorderLevel: 1, avgUnitPrice: 1.0, supplier: 'Market' },
-    { name: 'Mushrooms', unit: 'kg', currentStock: 1, reorderLevel: 2, avgUnitPrice: 3.5, supplier: 'Lulu' },
-    { name: 'Cream', unit: 'pack', currentStock: 5, reorderLevel: 3, avgUnitPrice: 2.0, supplier: 'Carrefour' },
-  ];
-  for (const p of sampleProducts) await ProductDB.add(p);
-
-  const today = new Date().toISOString().split('T')[0];
-  await OrderDB.add({
-    customerName: 'فاطمة', customerPhone: '96891234567', area: 'الخوير',
-    orderDate: today, deliveryDate: today, type: 'regular',
-    items: [{ dishName: 'Chicken Alfredo', quantity: 2, price: 4.5, cost: 2.5 }, { dishName: 'Garlic Bread', quantity: 1, price: 1.5, cost: 0.5 }],
-    deliveryFee: 1.0, deposit: 0, total: 11.5, status: 'completed', notes: 'عميلة دائمة',
-  });
-
-  await ExpenseDB.add({ category: 'electricity', amount: 25.0, date: today, description: 'فاتورة كهرباء مايو', receipt: null });
-  await ExpenseDB.add({ category: 'groceries', amount: 35.5, date: today, description: 'مشتريات بقالة أسبوعية', receipt: null });
 }

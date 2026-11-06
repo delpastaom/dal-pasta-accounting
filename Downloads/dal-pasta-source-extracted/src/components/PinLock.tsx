@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { t } from '@/lib/i18n';
-import { verifyStoredPin } from '@/lib/supabase';
+import { signOut } from '@/lib/auth';
+import { hasDevicePin, MAX_PIN_ATTEMPTS, recordPinFailure, resetPinFailures, setDevicePin, verifyDevicePin } from '@/lib/device-pin';
 
 interface PinLockProps {
   onUnlock: () => void;
@@ -8,10 +9,30 @@ interface PinLockProps {
 
 export default function PinLock({ onUnlock }: PinLockProps) {
   const [pin, setPin] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
+  const [isSetup] = useState(() => !hasDevicePin());
+  const [firstEntry, setFirstEntry] = useState<string | null>(null);
+
+  const submit = useCallback(async (entered: string) => {
+    setPin('');
+    if (isSetup) {
+      if (firstEntry === null) { setFirstEntry(entered); return; }
+      if (entered !== firstEntry) { setFirstEntry(null); setError(t('pinMismatch')); return; }
+      await setDevicePin(entered);
+      onUnlock();
+      return;
+    }
+    if (await verifyDevicePin(entered)) {
+      resetPinFailures();
+      onUnlock();
+      return;
+    }
+    if (recordPinFailure() >= MAX_PIN_ATTEMPTS) { await signOut(); return; }
+    setError(t('pinWrong'));
+  }, [isSetup, firstEntry, onUnlock]);
 
   const handleKey = useCallback((key: string) => {
-    setError(false);
+    setError('');
     if (key === 'backspace') {
       setPin(p => p.slice(0, -1));
     } else if (key === 'clear') {
@@ -19,32 +40,9 @@ export default function PinLock({ onUnlock }: PinLockProps) {
     } else if (pin.length < 4) {
       const newPin = pin + key;
       setPin(newPin);
-      if (newPin.length === 4) {
-        setTimeout(async () => {
-          try {
-            const valid = await verifyStoredPin(newPin);
-            if (valid) {
-              onUnlock();
-            } else {
-              setError(true);
-              setPin('');
-            }
-          } catch {
-            // If Supabase fails, try local fallback
-            const saved = localStorage.getItem('dp_settings');
-            let localPin = '1234';
-            if (saved) { try { localPin = JSON.parse(saved).pin || '1234'; } catch { /* ignore */ } }
-            if (newPin === localPin) {
-              onUnlock();
-            } else {
-              setError(true);
-              setPin('');
-            }
-          }
-        }, 200);
-      }
+      if (newPin.length === 4) setTimeout(() => { void submit(newPin); }, 200);
     }
-  }, [pin, onUnlock]);
+  }, [pin, submit]);
 
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'backspace'];
 
@@ -63,7 +61,7 @@ export default function PinLock({ onUnlock }: PinLockProps) {
       </div>
 
       <div className="mb-6">
-        <p className="text-center mb-4 font-medium" style={{ color: '#2C1810' }}>{t('pinTitle')}</p>
+        <p className="text-center mb-4 font-medium" style={{ color: '#2C1810' }}>{isSetup ? t(firstEntry === null ? 'pinSetupTitle' : 'pinConfirmTitle') : t('pinTitle')}</p>
         <div className="flex gap-4 justify-center">
           {[0, 1, 2, 3].map(i => (
             <div key={i} style={{
@@ -75,7 +73,7 @@ export default function PinLock({ onUnlock }: PinLockProps) {
             }} />
           ))}
         </div>
-        {error && <p className="text-center mt-3 text-sm font-medium animate-fadeIn" style={{ color: '#dc2626' }}>{t('pinWrong')}</p>}
+        {error && <p className="text-center mt-3 text-sm font-medium animate-fadeIn" style={{ color: '#dc2626' }}>{error}</p>}
       </div>
 
       <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
@@ -92,7 +90,8 @@ export default function PinLock({ onUnlock }: PinLockProps) {
         })}
       </div>
 
-      <p className="text-xs mt-6 text-center" style={{ color: '#A08B6D' }}>{t('pinSubtitle')}</p>
+      <p className="text-xs mt-6 text-center" style={{ color: '#A08B6D' }}>{t(isSetup ? 'pinSetupSubtitle' : 'pinSubtitle')}</p>
+      {!isSetup && <button onClick={() => { void signOut(); }} className="text-xs mt-3 underline" style={{ color: '#8B7355' }}>{t('forgotPin')}</button>}
     </div>
   );
 }

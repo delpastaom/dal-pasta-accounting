@@ -58,11 +58,11 @@ export default function Dishes() {
       await loadDishes();
       resetForm();
       if (!andNew) setShowForm(false);
-    } catch {}
+    } catch (e: any) { alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   const handleDelete = async (id: string) => {
-    try { await DishDB.delete(id); setDeleteDialog(null); await loadDishes(); } catch {}
+    try { await DishDB.delete(id); setDeleteDialog(null); await loadDishes(); } catch (e: any) { alert(`⚠️ فشل الحذف!\n${e?.message || 'خطأ غير معروف'}`); }
   };
 
   if (loading && dishes.length === 0) {

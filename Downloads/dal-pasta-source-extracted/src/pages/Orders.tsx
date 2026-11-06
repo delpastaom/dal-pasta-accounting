@@ -111,7 +111,8 @@ export default function Orders() {
       }
 
       // حفظ/تحديث بيانات الزبون تلقائياً عند كل طلب
-      if (customerName.trim()) {
+      // الطلب حُفظ فعلًا؛ فشل هذا الجزء لا يُعرض كفشل للحفظ حتى لا يُعاد إدخال الطلب مرتين
+      if (customerName.trim()) try {
         const allCustomers = await CustomerDB.getAll();
         const existing = allCustomers.find(c =>
           c.name === customerName.trim() ||
@@ -133,6 +134,9 @@ export default function Orders() {
             notes: '',
           });
         }
+      } catch (e: any) {
+        console.error(e);
+        alert(`⚠️ حُفظ الطلب، لكن تعذر تحديث بيانات الزبون.\n${e?.message || 'خطأ غير معروف'}`);
       }
 
       if (andNew) { resetForm(); } else { resetForm(); setShowForm(false); }
@@ -663,7 +667,7 @@ ${watermark}
 
   const handleQuickStatus = async (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    try { await OrderDB.update(orderId, { status: newStatus }); } catch { await loadData(); }
+    try { await OrderDB.update(orderId, { status: newStatus }); } catch (e: any) { alert(`⚠️ فشل الحفظ!\n${e?.message || 'خطأ غير معروف'}`); await loadData(); }
   };
 
   const addDishItem = (dish: { name: string; nameEn?: string; price: number; cost: number }) => {
@@ -682,8 +686,10 @@ ${watermark}
     const price = parseFloat(manualDishPrice) || 0;
     if (!name || price <= 0) return;
     if (saveForFuture) {
-      const saved = await DishDB.add({ name, price, cost: 0 });
-      setDishes(prev => [...prev, saved]);
+      try {
+        const saved = await DishDB.add({ name, price, cost: 0 });
+        setDishes(prev => [...prev, saved]);
+      } catch (e: any) { alert(`⚠️ فشل حفظ الطبق للمستقبل، وأُضيف إلى هذا الطلب فقط.\n${e?.message || 'خطأ غير معروف'}`); }
     }
     addDishItem({ name, price, cost: 0 });
     setManualDishName('');

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { t, setLang, getLang } from '@/lib/i18n';
-import { SettingsDB, exportAll, importAll, resetAll, seedData, isCloudConnected } from '@/lib/hybrid-db';
-import { setSupabaseConfig, updateStoredPin } from '@/lib/supabase';
+import { SettingsDB, exportAll, importAll, resetAll, isCloudConnected } from '@/lib/hybrid-db';
+import { setSupabaseConfig } from '@/lib/supabase';
+import { setDevicePin, verifyDevicePin } from '@/lib/device-pin';
 import type { Lang } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -55,8 +56,8 @@ export default function Settings() {
     setPinMessage(''); setPinError(false);
     if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { setPinMessage('PIN must be 4 digits'); setPinError(true); return; }
     if (newPin !== confirmPin) { setPinMessage(t('pinMismatch')); setPinError(true); return; }
-    const success = await updateStoredPin(currentPin, newPin);
-    if (success) { setPinMessage(t('pinChanged')); setPinError(false); setCurrentPin(''); setNewPin(''); setConfirmPin(''); }
+    const success = await verifyDevicePin(currentPin);
+    if (success) { await setDevicePin(newPin); setPinMessage(t('pinChanged')); setPinError(false); setCurrentPin(''); setNewPin(''); setConfirmPin(''); }
     else { setPinMessage(t('pinWrong')); setPinError(true); }
   };
 
@@ -74,8 +75,7 @@ export default function Settings() {
     reader.readAsText(file); e.target.value = '';
   };
 
-  const handleReset = () => { resetAll(); setShowResetDialog(false); SettingsDB.set({ pin: '1234' }); window.location.reload(); };
-  const handleSeed = async () => { await seedData(); window.location.reload(); };
+  const handleReset = () => { resetAll(); setShowResetDialog(false); window.location.reload(); };
 
   const handleConnectSupabase = () => {
     if (!sbUrl.trim() || !sbKey.trim()) { setSbMessage('Please enter both URL and Key'); return; }
@@ -233,12 +233,6 @@ export default function Settings() {
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base">⚠️ {t('resetAll')}</CardTitle></CardHeader>
         <CardContent><Button onClick={() => setShowResetDialog(true)} variant="destructive" className="w-full gap-2">🗑 {t('resetAll')}</Button></CardContent>
-      </Card>
-
-      {/* Seed */}
-      <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-base">🌱 Seed Sample Data</CardTitle></CardHeader>
-        <CardContent><Button onClick={handleSeed} variant="outline" className="w-full gap-2 text-xs">Load sample dishes, products & order</Button></CardContent>
       </Card>
 
       {/* About */}
