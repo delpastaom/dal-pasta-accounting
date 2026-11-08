@@ -463,12 +463,23 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
   .footer-meta p { margin-bottom: 2px; }
   .footer-meta strong { color: #5C4A35; }
   .stamp-svg { width: 110px; height: 110px; }
+  .stamp-off .stamp-svg { visibility: hidden; }
+
+  /* شريط التحكم — لا يُطبع */
+  .toolbar { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 8px; background: #fff; border: 1px solid #E5D5B5; border-radius: 10px; padding: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+  .toolbar button { font-family: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 8px; border: 1px solid #E5A53C; background: #fff; color: #8B6914; cursor: pointer; }
+  .toolbar .print-btn { background: #E5A53C; color: #fff; }
 
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .toolbar { display: none; }
   }
 </style></head>
 <body>
+<div class="toolbar">
+  <button id="stamp-btn" type="button">إخفاء الختم</button>
+  <button class="print-btn" type="button" onclick="window.print()">🖨️ طباعة</button>
+</div>
 ${watermark}
 <div class="content">
 
@@ -564,7 +575,23 @@ ${watermark}
   </div>
 
 </div>
-<script>window.onload=()=>{window.print();}</script>
+<script>
+  // يُخفي الختم المرسوم ويترك مكانه فارغًا للختم الحقيقي، ويتذكّر آخر اختيار
+  var STAMP_KEY = 'dp_invoice_stamp';
+  var stampOn = true;
+  try { stampOn = localStorage.getItem(STAMP_KEY) !== 'off'; } catch (e) {}
+  var stampBtn = document.getElementById('stamp-btn');
+  function applyStamp() {
+    document.body.classList.toggle('stamp-off', !stampOn);
+    stampBtn.textContent = stampOn ? 'إخفاء الختم' : 'إظهار الختم';
+  }
+  stampBtn.onclick = function () {
+    stampOn = !stampOn;
+    try { localStorage.setItem(STAMP_KEY, stampOn ? 'on' : 'off'); } catch (e) {}
+    applyStamp();
+  };
+  applyStamp();
+</script>
 </body></html>`;
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
