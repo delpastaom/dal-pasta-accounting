@@ -403,20 +403,13 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
         <td class="td-total">${fmt(i.price * i.quantity)}</td>
       </tr>`).join('');
 
-    const watermark = cfg.logoBase64
-      ? `<div class="watermark"><img src="${cfg.logoBase64}" /></div>`
-      : `<div class="watermark watermark-text">${cfg.businessName}</div>`;
-
     const html = `<!DOCTYPE html><html dir="rtl" lang="ar">
 <head><meta charset="UTF-8"><title>فاتورة #${num}</title>
 <style>
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 11px; color: #000; position: relative; padding: 15mm 12mm; }
-  .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; z-index: 0; pointer-events: none; }
-  .watermark img { width: 320px; height: 320px; object-fit: contain; filter: grayscale(1); }
   .header-logo img, .stamp-svg image { filter: grayscale(1) contrast(1.2); }
-  .watermark-text { font-size: 90px; font-weight: 900; color: #000; white-space: nowrap; }
   .content { position: relative; z-index: 1; }
 
   /* HEADER */
@@ -481,7 +474,6 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
   <button id="stamp-btn" type="button">إخفاء الختم</button>
   <button class="print-btn" type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
-${watermark}
 <div class="content">
 
   <div class="header">
