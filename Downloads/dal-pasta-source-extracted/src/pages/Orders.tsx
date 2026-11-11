@@ -412,38 +412,39 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
 <style>
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 11px; color: #1a1a1a; position: relative; padding: 15mm 12mm; }
+  body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 11px; color: #000; position: relative; padding: 15mm 12mm; }
   .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; z-index: 0; pointer-events: none; }
-  .watermark img { width: 320px; height: 320px; object-fit: contain; }
-  .watermark-text { font-size: 90px; font-weight: 900; color: #E5A53C; white-space: nowrap; }
+  .watermark img { width: 320px; height: 320px; object-fit: contain; filter: grayscale(1); }
+  .header-logo img, .stamp-svg image { filter: grayscale(1) contrast(1.2); }
+  .watermark-text { font-size: 90px; font-weight: 900; color: #000; white-space: nowrap; }
   .content { position: relative; z-index: 1; }
 
   /* HEADER */
-  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 12px; border-bottom: 3px solid #E5A53C; margin-bottom: 16px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 12px; border-bottom: 3px solid #000; margin-bottom: 16px; }
   .header-logo { display: flex; align-items: center; gap: 10px; }
   .header-logo img { width: 64px; height: 64px; object-fit: contain; }
-  .header-logo-text .name { font-size: 22px; font-weight: 900; color: #2C1810; }
-  .header-logo-text .sub { font-size: 10px; color: #8B7355; margin-top: 2px; }
-  .header-logo-text .phone { font-size: 11px; color: #5C4A35; margin-top: 3px; font-weight: 700; }
+  .header-logo-text .name { font-size: 22px; font-weight: 900; color: #000; }
+  .header-logo-text .sub { font-size: 10px; color: #333; margin-top: 2px; }
+  .header-logo-text .phone { font-size: 11px; color: #000; margin-top: 3px; font-weight: 700; }
   .header-right { text-align: left; }
-  .invoice-title { font-size: 20px; font-weight: 900; color: #E5A53C; }
-  .invoice-num { font-size: 13px; font-weight: 700; color: #2C1810; margin-top: 2px; }
-  .invoice-date { font-size: 10px; color: #8B7355; margin-top: 2px; }
+  .invoice-title { font-size: 20px; font-weight: 900; color: #000; }
+  .invoice-num { font-size: 13px; font-weight: 700; color: #000; margin-top: 2px; }
+  .invoice-date { font-size: 10px; color: #333; margin-top: 2px; }
 
   /* INFO BOXES */
   .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-  .info-box { border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px 12px; }
-  .info-box-title { font-size: 9px; font-weight: 700; color: #E5A53C; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #F5E6C8; padding-bottom: 5px; margin-bottom: 7px; }
-  .info-box p { font-size: 11px; color: #2C1810; margin-bottom: 2px; }
-  .info-box .highlight { font-size: 13px; font-weight: 900; color: #2C1810; }
+  .info-box { border: 1px solid #999; border-radius: 8px; padding: 10px 12px; }
+  .info-box-title { font-size: 9px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #999; padding-bottom: 5px; margin-bottom: 7px; }
+  .info-box p { font-size: 11px; color: #000; margin-bottom: 2px; }
+  .info-box .highlight { font-size: 13px; font-weight: 900; color: #000; }
 
   /* TABLE */
   table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-  th { background: #E5A53C; color: #fff; font-size: 10px; font-weight: 700; padding: 7px 8px; text-align: right; }
+  th { background: #fff; color: #000; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; font-size: 10px; font-weight: 700; padding: 7px 8px; text-align: right; }
   th:last-child, td:last-child { text-align: left; }
-  td { padding: 7px 8px; font-size: 11px; border-bottom: 1px solid #F0E8D8; }
-  .row-even { background: #FFFBF4; }
-  .td-num { width: 28px; text-align: center; color: #8B7355; font-size: 10px; }
+  td { padding: 7px 8px; font-size: 11px; border-bottom: 1px solid #bbb; }
+  .row-even { background: #fff; }
+  .td-num { width: 28px; text-align: center; color: #333; font-size: 10px; }
   .td-desc { font-weight: 600; }
   .td-qty { width: 50px; text-align: center; }
   .td-price { width: 80px; text-align: left; }
@@ -452,16 +453,16 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
   /* TOTALS */
   .totals-wrap { display: flex; justify-content: flex-end; margin-bottom: 20px; }
   .totals { width: 260px; }
-  .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; border-bottom: 1px solid #F0E8D8; }
-  .totals-row.grand { font-size: 14px; font-weight: 900; color: #2C1810; padding: 8px 0; border-top: 2px solid #E5A53C; border-bottom: 2px solid #E5A53C; }
-  .totals-row.balance { font-size: 12px; font-weight: 700; color: #DC2626; }
-  .totals-row.paid { color: #16a34a; }
+  .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; border-bottom: 1px solid #bbb; }
+  .totals-row.grand { font-size: 14px; font-weight: 900; color: #000; padding: 8px 0; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+  .totals-row.balance { font-size: 12px; font-weight: 700; color: #000; }
+  .totals-row.paid { color: #000; }
 
   /* FOOTER */
-  .footer { border-top: 2px solid #F5E6C8; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
-  .footer-meta { font-size: 9px; color: #A08B6D; }
+  .footer { border-top: 2px solid #999; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .footer-meta { font-size: 9px; color: #333; }
   .footer-meta p { margin-bottom: 2px; }
-  .footer-meta strong { color: #5C4A35; }
+  .footer-meta strong { color: #000; }
   .stamp-svg { width: 110px; height: 110px; }
   .stamp-off .stamp-svg { visibility: hidden; }
 
@@ -489,8 +490,8 @@ ${watermark}
       <div class="header-logo-text">
         <div class="name">${cfg.businessName}</div>
         <div class="sub">${cfg.businessSubtitle}</div>
-        <div class="phone">📞 ${cfg.businessPhone}</div>
-        ${cfg.businessAddress ? `<div class="sub">📍 ${cfg.businessAddress}</div>` : ''}
+        <div class="phone">هاتف: ${cfg.businessPhone}</div>
+        ${cfg.businessAddress ? `<div class="sub">${cfg.businessAddress}</div>` : ''}
         <div class="sub">${cfg.businessCity}</div>
       </div>
     </div>
@@ -512,8 +513,8 @@ ${watermark}
     <div class="info-box">
       <div class="info-box-title">فاتورة إلى</div>
       <p class="highlight">${order.customerName}</p>
-      ${order.customerPhone ? `<p>📞 ${order.customerPhone}</p>` : ''}
-      ${order.area ? `<p>📍 ${order.area}</p>` : ''}
+      ${order.customerPhone ? `<p>هاتف: ${order.customerPhone}</p>` : ''}
+      ${order.area ? `<p>${order.area}</p>` : ''}
     </div>
   </div>
 
@@ -530,7 +531,7 @@ ${watermark}
     <tbody>
       ${itemRows}
       ${order.deliveryFee > 0 ? `<tr><td class="td-num"></td><td class="td-desc">🚗 رسوم التوصيل</td><td class="td-qty">1</td><td class="td-price">${fmt(order.deliveryFee)}</td><td class="td-total">${fmt(order.deliveryFee)}</td></tr>` : ''}
-      ${(order.tablewareFee || 0) > 0 ? `<tr><td class="td-num"></td><td class="td-desc">🍽️ رسوم الأواني</td><td class="td-qty">1</td><td class="td-price">${fmt(order.tablewareFee!)}</td><td class="td-total">${fmt(order.tablewareFee!)}</td></tr>` : ''}
+      ${(order.tablewareFee || 0) > 0 ? `<tr><td class="td-num"></td><td class="td-desc">رسوم الأواني</td><td class="td-qty">1</td><td class="td-price">${fmt(order.tablewareFee!)}</td><td class="td-total">${fmt(order.tablewareFee!)}</td></tr>` : ''}
     </tbody>
   </table>
 
@@ -540,18 +541,18 @@ ${watermark}
       <div class="totals-row"><span>ضريبة القيمة المضافة (5%)</span><span>${fmt(vatAmount)} ر.ع</span></div>` : ''}
       <div class="totals-row grand"><span>الإجمالي</span><span>${fmt(grandTotal)} ر.ع</span></div>
       ${order.deposit > 0 ? `
-      <div class="totals-row paid"><span>✅ العربون المدفوع</span><span>- ${fmt(order.deposit)} ر.ع</span></div>
+      <div class="totals-row paid"><span>العربون المدفوع</span><span>- ${fmt(order.deposit)} ر.ع</span></div>
       <div class="totals-row balance"><span>المبلغ المتبقي</span><span>${fmt(balance)} ر.ع</span></div>` : ''}
     </div>
   </div>
 
-  ${order.notes ? `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;padding:8px 12px;margin-bottom:16px;font-size:11px;color:#7C6845"><b>ملاحظات:</b> ${order.notes}</div>` : ''}
+  ${order.notes ? `<div style="background:#fff;border:1px solid #000;border-radius:6px;padding:8px 12px;margin-bottom:16px;font-size:11px;color:#000"><b>ملاحظات:</b> ${order.notes}</div>` : ''}
 
   <div class="footer">
     <div class="footer-meta">
       ${cfg.crNumber ? `<p>السجل التجاري: <strong>${cfg.crNumber}</strong></p>` : ''}
       ${cfg.vatNumber ? `<p>الرقم الضريبي: <strong>${cfg.vatNumber}</strong></p>` : ''}
-      <p style="margin-top:4px;color:#C0A880">شكراً لثقتكم — أكل متروس لذة من 2018</p>
+      <p style="margin-top:4px;color:#333">شكراً لثقتكم — أكل متروس لذة من 2018</p>
     </div>
     <svg class="stamp-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -559,18 +560,18 @@ ${watermark}
         <path id="top-arc" d="M 30,100 a 70,70 0 1,1 140,0" fill="none"/>
         <path id="bot-arc" d="M 170,100 a 70,70 0 1,1 -140,0" fill="none"/>
       </defs>
-      <circle cx="100" cy="100" r="96" fill="none" stroke="#1e3a5f" stroke-width="5"/>
-      <circle cx="100" cy="100" r="87" fill="none" stroke="#1e3a5f" stroke-width="2"/>
-      <circle cx="100" cy="100" r="83" fill="none" stroke="#1e3a5f" stroke-width="1" stroke-dasharray="4,3"/>
+      <circle cx="100" cy="100" r="96" fill="none" stroke="#000" stroke-width="5"/>
+      <circle cx="100" cy="100" r="87" fill="none" stroke="#000" stroke-width="2"/>
+      <circle cx="100" cy="100" r="83" fill="none" stroke="#000" stroke-width="1" stroke-dasharray="4,3"/>
       ${cfg.logoBase64
         ? `<image href="${cfg.logoBase64}" x="58" y="58" width="84" height="84" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid slice"/>`
-        : `<text x="100" y="106" text-anchor="middle" font-size="22" font-weight="900" fill="#1e3a5f" font-family="Arial">${cfg.businessName}</text>`
+        : `<text x="100" y="106" text-anchor="middle" font-size="22" font-weight="900" fill="#000" font-family="Arial">${cfg.businessName}</text>`
       }
-      <circle cx="100" cy="100" r="45" fill="none" stroke="#1e3a5f" stroke-width="2.5"/>
-      <text font-size="13" fill="#1e3a5f" font-weight="700" font-family="Arial"><textPath href="#top-arc" startOffset="50%" text-anchor="middle">${cfg.businessName} · ${cfg.businessCity}</textPath></text>
-      <text font-size="11" fill="#2c5282" font-family="Arial"><textPath href="#bot-arc" startOffset="50%" text-anchor="middle">${cfg.crNumber ? 'CR ' + cfg.crNumber : cfg.businessSubtitle}</textPath></text>
-      <circle cx="27" cy="100" r="4" fill="#1e3a5f"/>
-      <circle cx="173" cy="100" r="4" fill="#1e3a5f"/>
+      <circle cx="100" cy="100" r="45" fill="none" stroke="#000" stroke-width="2.5"/>
+      <text font-size="13" fill="#000" font-weight="700" font-family="Arial"><textPath href="#top-arc" startOffset="50%" text-anchor="middle">${cfg.businessName} · ${cfg.businessCity}</textPath></text>
+      <text font-size="11" fill="#000" font-family="Arial"><textPath href="#bot-arc" startOffset="50%" text-anchor="middle">${cfg.crNumber ? 'CR ' + cfg.crNumber : cfg.businessSubtitle}</textPath></text>
+      <circle cx="27" cy="100" r="4" fill="#000"/>
+      <circle cx="173" cy="100" r="4" fill="#000"/>
     </svg>
   </div>
 
