@@ -497,7 +497,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
 
   <div class="info-row">
     <div class="info-box">
-      <div class="info-box-title">بيانات المنشأة</div>
+      <div class="info-box-title">فاتورة من</div>
       ${cfg.crNumber ? `<p>السجل التجاري: <strong>${cfg.crNumber}</strong></p>` : ''}
       ${cfg.vatNumber ? `<p>الرقم الضريبي: <strong>${cfg.vatNumber}</strong></p>` : ''}
       <p>${cfg.businessCity}</p>
