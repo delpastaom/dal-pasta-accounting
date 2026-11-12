@@ -423,6 +423,9 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
   .invoice-title { font-size: 20px; font-weight: 900; color: #000; }
   .invoice-num { font-size: 13px; font-weight: 700; color: #000; margin-top: 2px; }
   .invoice-date { font-size: 10px; color: #333; margin-top: 2px; }
+  .date-blank { display: none; }
+  .dates-off .date-filled, .dates-off .delivery-date { display: none; }
+  .dates-off .date-blank { display: block; }
 
   /* INFO BOXES */
   .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
@@ -472,6 +475,7 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
 <body>
 <div class="toolbar">
   <button id="stamp-btn" type="button">إخفاء الختم</button>
+  <button id="date-btn" type="button">إخفاء التاريخ</button>
   <button class="print-btn" type="button" onclick="window.print()">🖨️ طباعة</button>
 </div>
 <div class="content">
@@ -490,8 +494,9 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
     <div class="header-right">
       <div class="invoice-title">${hasVat ? 'فاتورة ضريبية' : 'فاتورة'}</div>
       <div class="invoice-num">رقم: ${String(num).padStart(5, '0')}</div>
-      <div class="invoice-date">التاريخ: ${today}</div>
-      <div class="invoice-date">تاريخ التسليم: ${order.deliveryDate}</div>
+      <div class="invoice-date date-filled">التاريخ: ${today}</div>
+      <div class="invoice-date date-blank">التاريخ: ..............................</div>
+      <div class="invoice-date delivery-date">تاريخ التسليم: ${order.deliveryDate}</div>
     </div>
   </div>
 
@@ -584,6 +589,15 @@ ${order.notes ? `<hr class="dash"><div class="info-sub"><b>Notes:</b> ${order.no
     applyStamp();
   };
   applyStamp();
+
+  // إخفاء التاريخ لفاتورة واحدة فقط (لا يُحفظ، حتى لا تخرج الفواتير التالية بلا تاريخ)
+  var datesOn = true;
+  var dateBtn = document.getElementById("date-btn");
+  dateBtn.onclick = function () {
+    datesOn = !datesOn;
+    document.body.classList.toggle("dates-off", !datesOn);
+    dateBtn.textContent = datesOn ? "إخفاء التاريخ" : "إظهار التاريخ";
+  };
 </script>
 </body></html>`;
     const win = window.open('', '_blank');
